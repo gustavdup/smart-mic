@@ -146,6 +146,7 @@ static temperature_sensor_handle_t s_temp_sensor = NULL;
 volatile bool isRecording   = false;
 volatile bool isUploading   = false;
 volatile bool stopRequested = false;
+volatile bool g_motorActive = false;  // suppresses updateDisplay() I2C during motor pulses
 volatile int   uploadingBuf  = -1;   // index of PSRAM buffer currently uploading (-1 = none)
 volatile float uploadKBps   = 0.0f; // live upload speed, updated during streaming
 
@@ -1036,9 +1037,11 @@ void recordingTask(void* arg) {
   while (true) {
     while (!isRecording) { vTaskDelay(pdMS_TO_TICKS(100)); }
 
+    g_motorActive = true;  // suppress display for entire start sequence (initMic GPIO reconfig + motor)
     Serial.println("[rec] initMic starting...");
     if (!initMic()) {
       Serial.println("[rec] initMic FAILED — recording aborted");
+      g_motorActive = false;
       isRecording = false;
       vTaskDelay(pdMS_TO_TICKS(500));
       continue;
@@ -1046,6 +1049,7 @@ void recordingTask(void* arg) {
 
     if (!psramBuf[0] || !psramBuf[1]) {
       Serial.println("[rec] PSRAM buffers unavailable — aborting");
+      g_motorActive = false;
       isRecording = false;
       continue;
     }
@@ -1061,7 +1065,8 @@ void recordingTask(void* arg) {
     addLog("REC started");
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(80)); digitalWrite(MOTOR_PIN, LOW); vTaskDelay(pdMS_TO_TICKS(60));
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(80)); digitalWrite(MOTOR_PIN, LOW);
-    vTaskDelay(pdMS_TO_TICKS(50));  // let inductive kickback dissipate before I2C resumes
+    vTaskDelay(pdMS_TO_TICKS(50));
+    g_motorActive = false;
 
     static int32_t rawBuf[1024];   // 32-bit DMA reads from ICS-43434
     static int16_t audioBuf[1024]; // converted 16-bit samples for WAV
@@ -1170,12 +1175,13 @@ void recordingTask(void* arg) {
 
     finalizeAndQueueSegment();
     addLog("REC stopped");
+    g_motorActive = true;  // suppress display across motor + I2S teardown
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(200)); digitalWrite(MOTOR_PIN, LOW);
-    vTaskDelay(pdMS_TO_TICKS(50));  // let inductive kickback dissipate before I2C resumes
-
+    vTaskDelay(pdMS_TO_TICKS(50));
     i2s_channel_disable(i2s_rx_handle);
     i2s_del_channel(i2s_rx_handle);
     i2s_rx_handle = NULL;
+    g_motorActive = false;
     isRecording   = false;
     bleLogCount   = 0;
     Serial.println("[rec] Stopped");
@@ -1269,6 +1275,12 @@ static void scanQRCode() {
     digitalWrite(PDM_PWR, HIGH);
     return;
   }
+
+  // Camera GPIO reconfiguration corrupts I2C — recover before touching OLED
+  Wire.end();
+  Wire.begin(5, 6);
+  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  oled.setRotation(2);
 
   sensor_t* s = esp_camera_sensor_get();
   if (s) {
@@ -1383,6 +1395,7 @@ static void scanQRCode() {
   quirc_destroy(q);
   esp_camera_deinit();
 
+  g_motorActive = true;  // suppress display during motor kickback
   if (found) {
     digitalWrite(MOTOR_PIN, HIGH); delay(120);
     digitalWrite(MOTOR_PIN, LOW);  delay(80);
@@ -1394,7 +1407,13 @@ static void scanQRCode() {
     digitalWrite(MOTOR_PIN, HIGH); delay(100);
     digitalWrite(MOTOR_PIN, LOW);
   }
-  delay(50);  // let motor inductive kickback dissipate before I2C
+  delay(50);  // let motor inductive kickback dissipate
+  g_motorActive = false;
+  // Reset I2C — power glitch from motor can lock up SDA/SCL while loop() is blocked
+  Wire.end();
+  Wire.begin(5, 6);
+  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  oled.setRotation(2);
 
   oled.clearDisplay();
   oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
@@ -1440,6 +1459,7 @@ void updateDisplay() {
     g_screenOff = true;
   }
   if (g_screenOff) return;
+  if (g_motorActive) return;  // don't touch I2C while motor is drawing current
 
   oled.clearDisplay();
   oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
