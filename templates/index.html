@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Michelin Beacon Scanner</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0d0d0d;
+      color: #e8e8e8;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.02em; }
+
+    #status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #444; flex-shrink: 0; transition: background 0.3s;
+    }
+    #status-dot.active { background: #22c55e; box-shadow: 0 0 8px #22c55e88; }
+    #status-dot.lost   { background: #ef4444; }
+
+    #status-label { font-size: 0.75rem; color: #666; }
+
+    #rec-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding: 10px 16px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    #rec-bar.recording { border-color: #ef444455; color: #e8e8e8; }
+    #rec-bar.uploading { border-color: #3b82f655; color: #e8e8e8; }
+
+    #rec-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #333; flex-shrink: 0;
+    }
+    #rec-bar.recording #rec-dot { background: #ef4444; animation: pulse 1s infinite; }
+    #rec-bar.uploading #rec-dot { background: #3b82f6; animation: pulse 0.6s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    #rec-label { flex: 1; }
+    #rec-file  { font-size: 0.7rem; color: #555; font-variant-numeric: tabular-nums; }
+
+    #empty-state {
+      margin-top: 80px; text-align: center; color: #444; font-size: 0.9rem;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card.fresh { border-color: #22c55e55; }
+    .card.stale { border-color: #2a2a2a; }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .beacon-id   { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .beacon-addr { font-size: 0.65rem; color: #555; margin-top: 2px; }
+
+    /* stale badge */
+    .stale-badge {
+      display: none;
+      font-size: 0.65rem;
+      color: #ef4444;
+      background: #ef444420;
+      border: 1px solid #ef444440;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-top: 4px;
+    }
+    .card.stale .stale-badge { display: inline-block; }
+
+    /* Signal bars */
+    .signal-bars { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+    .bar { width: 5px; border-radius: 2px; background: #2a2a2a; transition: background 0.4s; }
+    .bar.b1 { height: 30%; } .bar.b2 { height: 50%; }
+    .bar.b3 { height: 70%; } .bar.b4 { height: 90%; } .bar.b5 { height: 100%; }
+    .bar.lit { background: #22c55e; }
+    .card.stale .bar.lit { background: #555; }
+
+    .metrics { display: flex; flex-direction: column; gap: 10px; }
+
+    .metric-row { display: flex; justify-content: space-between; align-items: center; }
+
+    .metric-label {
+      font-size: 0.75rem; color: #666;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      font-size: 0.95rem; font-weight: 600;
+      color: #e8e8e8; font-variant-numeric: tabular-nums;
+    }
+    .card.stale .metric-value { color: #555; }
+
+    .rssi-track {
+      width: 100%; height: 4px; background: #2a2a2a;
+      border-radius: 2px; margin-top: 6px; overflow: hidden;
+    }
+    .rssi-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(to right, #ef4444, #facc15, #22c55e);
+      transition: width 0.4s ease;
+    }
+    .card.stale .rssi-fill { background: #444; }
+
+    /* Log */
+    .log-section { margin-top: 14px; }
+
+    .log-label {
+      font-size: 0.65rem; color: #444;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .log-scroll {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .log-scroll::-webkit-scrollbar { width: 3px; }
+    .log-scroll::-webkit-scrollbar-track { background: transparent; }
+    .log-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .log-list { display: flex; flex-direction: column; gap: 3px; padding-top: 2px; }
+
+    .log-entry {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      font-variant-numeric: tabular-nums;
+      color: #555;
+      padding: 2px 0;
+      border-bottom: 1px solid #1f1f1f;
+      animation: fadeIn 0.2s ease;
+    }
+    .log-entry:first-child { color: #888; }  /* most recent slightly brighter */
+
+    .log-entry .log-time { color: #444; }
+    .log-entry .log-rssi { color: #22c55e88; }
+    .log-entry .log-dist { color: #555; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+
+    .flash-ring {
+      position: absolute; inset: 0; border-radius: 12px;
+      border: 2px solid #22c55e00; pointer-events: none; transition: border-color 0.1s;
+    }
+    .flash-ring.flash { border-color: #22c55e66; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div id="status-dot"></div>
+  <h1>Michelin Beacon Scanner</h1>
+  <span id="status-label">connecting…</span>
+</header>
+
+<div id="rec-bar">
+  <div id="rec-dot"></div>
+  <span id="rec-label">ESP32 audio: idle</span>
+  <span id="rec-file"></span>
+</div>
+
+<div id="empty-state">Waiting for beacons…</div>
+<div id="grid"></div>
+
+<script>
+  const socket = io();
+  const cards  = {};
+  const grid   = document.getElementById("grid");
+
+  function reorderGrid() {
+    const sorted = Object.values(cards).sort((a, b) => a.major - b.major);
+    sorted.forEach(c => grid.appendChild(c.el));
+  }
+  const empty  = document.getElementById("empty-state");
+  const dot    = document.getElementById("status-dot");
+  const label  = document.getElementById("status-label");
+
+  const MAX_LOG = 100;
+
+  socket.on("connect", () => {
+    dot.className = "active";
+    label.textContent = "connected — waiting for BLE…";
+  });
+  socket.on("disconnect", () => {
+    dot.className = "lost";
+    label.textContent = "disconnected";
+  });
+  const recBar   = document.getElementById("rec-bar");
+  const recLabel = document.getElementById("rec-label");
+  const recFile  = document.getElementById("rec-file");
+
+  socket.on("recording_status", ({ state, file }) => {
+    recBar.className = state === "idle" ? "" : state;
+    if (state === "recording") {
+      recLabel.textContent = "ESP32 audio: recording";
+      recFile.textContent  = file || "";
+    } else if (state === "uploading") {
+      recLabel.textContent = "ESP32 audio: uploading to MinIO";
+      recFile.textContent  = file || "";
+    } else {
+      recLabel.textContent = "ESP32 audio: idle";
+      recFile.textContent  = "";
+    }
+  });
+
+  socket.on("ble_status", ({ status, message, mode }) => {
+    if (status === "scanning") { dot.className = "active"; label.textContent = "scanning" + (mode ? ` · ${mode}` : ""); }
+    else if (status === "error") { dot.className = "lost"; label.textContent = "BLE error: " + message; }
+  });
+
+  function rssiPct(rssi) { return Math.max(0, Math.min(100, ((rssi + 100) / 70) * 100)); }
+
+  function rssiBarCount(rssi) {
+    if (rssi > -55) return 5;
+    if (rssi > -65) return 4;
+    if (rssi > -75) return 3;
+    if (rssi > -85) return 2;
+    return 1;
+  }
+
+  function upsertCard(b) {
+    empty.style.display = "none";
+
+    if (!cards[b.key]) {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.innerHTML = `
+        <div class="flash-ring"></div>
+        <div class="card-header">
+          <div>
+            <div class="beacon-id">Table ${b.major} · Pos ${b.minor}</div>
+            <div class="beacon-addr">${b.address}</div>
+            <div class="stale-badge">out of range</div>
+          </div>
+          <div style="text-align:right">
+            <div class="signal-bars">
+              <div class="bar b1"></div><div class="bar b2"></div>
+              <div class="bar b3"></div><div class="bar b4"></div><div class="bar b5"></div>
+            </div>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric-row">
+            <span class="metric-label">RSSI</span>
+            <span class="metric-value" data-rssi>—</span>
+          </div>
+          <div class="rssi-track"><div class="rssi-fill" style="width:0%"></div></div>
+          <div class="metric-row">
+            <span class="metric-label">Distance</span>
+            <span class="metric-value" data-dist>—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">TX Power</span>
+            <span class="metric-value" data-tx>${b.tx_power} dBm</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Last seen</span>
+            <span class="metric-value" data-age>—</span>
+          </div>
+          <div style="height:1px;background:#222;margin:4px 0"></div>
+          <div class="metric-row">
+            <span class="metric-label">Last 30s hits</span>
+            <span class="metric-value" data-hits>—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Avg RSSI (last 20)</span>
+            <span class="metric-value" data-avg-rssi>—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Avg dist (last 20)</span>
+            <span class="metric-value" data-avg-dist>—</span>
+          </div>
+        </div>
+        <div class="log-section">
+          <div class="log-label">Detection log</div>
+          <div class="log-scroll"><div class="log-list"></div></div>
+        </div>`;
+      cards[b.key] = { el, major: b.major, logCount: 0, lastSeenTs: Date.now() };
+      reorderGrid();
+    }
+
+    const { el } = cards[b.key];
+
+    // Remove stale state
+    el.classList.remove("stale");
+    el.classList.add("fresh");
+    clearTimeout(cards[b.key].freshTimer);
+    cards[b.key].freshTimer = setTimeout(() => el.classList.remove("fresh"), 600);
+
+    // Record last seen timestamp
+    cards[b.key].lastSeenTs = Date.now();
+    el.querySelector("[data-age]").textContent = "0s ago";
+
+    // Update live metrics
+    el.querySelector("[data-rssi]").textContent = `${b.rssi} dBm`;
+    el.querySelector("[data-dist]").textContent = b.distance_m >= 0 ? `~${b.distance_m} m` : "—";
+    el.querySelector(".rssi-fill").style.width  = rssiPct(b.rssi) + "%";
+
+    const count = rssiBarCount(b.rssi);
+    el.querySelectorAll(".bar").forEach((bar, i) => bar.classList.toggle("lit", i < count));
+
+    // Flash
+    const ring = el.querySelector(".flash-ring");
+    ring.classList.add("flash");
+    clearTimeout(cards[b.key].flashTimer);
+    cards[b.key].flashTimer = setTimeout(() => ring.classList.remove("flash"), 250);
+
+    // Prepend log entry and keep scroll at top
+    const scroll = el.querySelector(".log-scroll");
+    const list   = el.querySelector(".log-list");
+    cards[b.key].logCount++;
+
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    entry.dataset.ts   = Date.now();
+    entry.dataset.rssi = b.rssi;
+    entry.dataset.dist = b.distance_m;
+    entry.innerHTML = `
+      <span class="log-time">${b.last_seen_iso}</span>
+      <span class="log-rssi">${b.rssi} dBm</span>
+      <span class="log-dist">${b.distance_m >= 0 ? "~" + b.distance_m + " m" : "—"}</span>`;
+    list.prepend(entry);
+
+    // Keep scroll pinned to top
+    scroll.scrollTop = 0;
+
+    // Cap log length
+    while (list.children.length > MAX_LOG) list.removeChild(list.lastChild);
+
+    // Hits: last 30 seconds
+    const cutoff30 = Date.now() - 30000;
+    const allEntries = Array.from(list.children);
+    const hits30 = allEntries.filter(e => Number(e.dataset.ts) >= cutoff30);
+
+    // Averages: last 20 entries, outliers removed via IQR filter
+    function iqrFilter(arr) {
+      if (arr.length < 4) return arr;
+      const s = [...arr].sort((a, b) => a - b);
+      const q1 = s[Math.floor(s.length * 0.25)];
+      const q3 = s[Math.floor(s.length * 0.75)];
+      const fence = (q3 - q1) * 1.5;
+      return arr.filter(v => v >= q1 - fence && v <= q3 + fence);
+    }
+    const last20  = allEntries.slice(0, 20);
+    const rssis   = iqrFilter(last20.map(e => Number(e.dataset.rssi)).filter(v => v !== 127 && v !== 0));
+    const dists   = iqrFilter(last20.map(e => Number(e.dataset.dist)).filter(d => d >= 0));
+    const avgRssi = rssis.length ? (rssis.reduce((a, v) => a + v, 0) / rssis.length).toFixed(1) : null;
+    const avgDist = dists.length ? (dists.reduce((a, v) => a + v, 0) / dists.length).toFixed(2) : null;
+
+    el.querySelector("[data-hits]").textContent     = hits30.length;
+    el.querySelector("[data-avg-rssi]").textContent = avgRssi ? `${avgRssi} dBm` : "—";
+    el.querySelector("[data-avg-dist]").textContent = avgDist ? `~${avgDist} m`  : "—";
+  }
+
+  socket.on("beacon_update", upsertCard);
+
+  socket.on("beacon_stale", ({ key }) => {
+    if (cards[key]) cards[key].el.classList.add("stale");
+  });
+
+  // Tick age counters every second
+  setInterval(() => {
+    const now = Date.now();
+    for (const card of Object.values(cards)) {
+      const secs = Math.round((now - card.lastSeenTs) / 1000);
+      card.el.querySelector("[data-age]").textContent = `${secs}s ago`;
+    }
+  }, 1000);
+</script>
+</body>
+</html>

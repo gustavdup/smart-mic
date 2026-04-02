@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .format-hint {
+      font-family: monospace;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+
+    .parsed {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #f8f8f8;
+      border: 1px solid #e8e8e8;
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    .parsed span { font-weight: 600; color: #1a1a1a; }
+
+    button {
+      width: 100%;
+      padding: 11px;
+      background: #4f46e5;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+
+    button:hover { background: #4338ca; }
+    button:active { background: #3730a3; }
+
+    #qr-section {
+      display: none;
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    #qr-label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 12px;
+    }
+
+    #qr-canvas {
+      display: inline-flex;
+      padding: 16px;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+    }
+
+    #qr-data {
+      margin-top: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #4f46e5;
+      word-break: break-all;
+    }
+
+    #download-btn {
+      margin-top: 14px;
+      background: #f0f0f0;
+      color: #333;
+      font-size: 0.875rem;
+      padding: 8px;
+    }
+
+    #download-btn:hover { background: #e0e0e0; }
+
+    .error {
+      font-size: 0.8rem;
+      color: #dc2626;
+      margin-top: 6px;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>QR Code Generator</h1>
+    <p class="subtitle">Enter data as <span class="format-hint">name|code</span> — the QR code will encode exactly that string.</p>
+
+    <label for="input">Data</label>
+    <input type="text" id="input" placeholder="Alice|ABC123" autocomplete="off" spellcheck="false">
+
+    <div class="row" id="preview-row" style="display:none">
+      <div class="parsed">Name: <span id="prev-name">—</span></div>
+      <div class="parsed">Code: <span id="prev-code">—</span></div>
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <button onclick="generate()">Generate QR Code</button>
+
+    <div id="qr-section">
+      <div id="qr-label">Scan to read encoded data</div>
+      <div id="qr-canvas"></div>
+      <div id="qr-data"></div>
+      <button id="download-btn" onclick="download()">Download PNG</button>
+    </div>
+  </div>
+
+  <script>
+    let qr = null;
+
+    const inputEl   = document.getElementById('input');
+    const errorEl   = document.getElementById('error');
+    const previewRow = document.getElementById('preview-row');
+    const prevName  = document.getElementById('prev-name');
+    const prevCode  = document.getElementById('prev-code');
+    const qrSection = document.getElementById('qr-section');
+    const qrData    = document.getElementById('qr-data');
+    const qrCanvas  = document.getElementById('qr-canvas');
+
+    inputEl.addEventListener('input', () => {
+      const val = inputEl.value.trim();
+      errorEl.textContent = '';
+      if (val.includes('|')) {
+        const [name, ...rest] = val.split('|');
+        const code = rest.join('|');
+        prevName.textContent = name || '—';
+        prevCode.textContent = code || '—';
+        previewRow.style.display = 'flex';
+      } else {
+        previewRow.style.display = 'none';
+      }
+    });
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') generate();
+    });
+
+    function generate() {
+      errorEl.textContent = '';
+      const val = inputEl.value.trim();
+
+      if (!val) {
+        errorEl.textContent = 'Please enter some data.';
+        return;
+      }
+      if (!val.includes('|')) {
+        errorEl.textContent = 'Format must be name|code — the pipe character is required.';
+        return;
+      }
+
+      // Clear previous QR
+      qrCanvas.innerHTML = '';
+
+      qr = new QRCode(qrCanvas, {
+        text: val,
+        width: 240,
+        height: 240,
+        colorDark: '#1a1a1a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      qrData.textContent = val;
+      qrSection.style.display = 'block';
+      qrSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function download() {
+      const canvas = qrCanvas.querySelector('canvas');
+      if (!canvas) return;
+      const val = inputEl.value.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `qr_${val || 'code'}.png`;
+      a.click();
+    }
+  </script>
+</body>
+</html>

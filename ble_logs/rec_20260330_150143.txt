@@ -1,0 +1,63 @@
+File   : /Users/gustavduplessis/Downloads/03-30-2026-17-04-17_files_list/rec_20260330_150143.wav
+Snapshots: 58  (58s of BLE data)
+
+   Time                  T1                  T2                  T3                  T4                  T5
+-----------------------------------------------------------------------------------------------------------
+   1.0s         -61dBm 1.2m         -79dBm 6.3m         -67dBm 2.1m         -77dBm 5.2m         -75dBm 4.4m
+   2.1s         -61dBm 1.2m         -79dBm 6.3m         -67dBm 2.1m         -77dBm 5.2m         -75dBm 4.4m
+   3.1s         -61dBm 1.2m         -79dBm 6.3m         -68dBm 2.3m         -77dBm 5.2m         -75dBm 4.4m
+   4.1s         -61dBm 1.2m         -71dBm 3.0m         -68dBm 2.3m         -76dBm 4.8m         -72dBm 3.3m
+   5.2s         -61dBm 1.2m         -77dBm 5.2m         -68dBm 2.3m         -71dBm 3.0m         -78dBm 5.8m
+   6.2s         -61dBm 1.2m         -77dBm 5.2m         -68dBm 2.3m         -77dBm 5.2m         -78dBm 5.8m
+   7.2s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -78dBm 5.8m
+   8.3s         -60dBm 1.1m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -78dBm 5.8m
+   9.3s         -62dBm 1.3m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -72dBm 3.3m
+  10.5s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -72dBm 3.3m
+  11.6s         -61dBm 1.2m        -86dBm 12.0m         -64dBm 1.6m         -71dBm 3.0m         -72dBm 3.3m
+  12.6s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -71dBm 3.0m         -72dBm 3.3m
+  13.7s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -71dBm 3.0m         -72dBm 3.3m
+  14.7s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -71dBm 3.0m         -80dBm 6.9m
+  15.7s         -61dBm 1.2m         -77dBm 5.2m         -68dBm 2.3m         -71dBm 3.0m         -80dBm 6.9m
+  16.8s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -80dBm 6.9m
+  17.8s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -80dBm 6.9m
+  18.8s         -61dBm 1.2m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -80dBm 6.9m
+  19.8s         -60dBm 1.1m         -77dBm 5.2m         -64dBm 1.6m         -77dBm 5.2m         -72dBm 3.3m
+  20.8s         -62dBm 1.3m         -77dBm 5.2m         -65dBm 1.7m         -73dBm 3.6m         -80dBm 6.9m
+  21.9s         -62dBm 1.3m         -72dBm 3.3m         -65dBm 1.7m         -70dBm 2.8m         -80dBm 6.9m
+  22.9s         -62dBm 1.3m         -72dBm 3.3m         -65dBm 1.7m         -70dBm 2.8m         -80dBm 6.9m
+  23.9s         -62dBm 1.3m         -72dBm 3.3m         -67dBm 2.1m         -70dBm 2.8m         -80dBm 6.9m
+  24.9s         -61dBm 1.2m         -83dBm 9.1m         -65dBm 1.7m         -70dBm 2.8m         -80dBm 6.9m
+  25.9s         -61dBm 1.2m         -76dBm 4.8m         -65dBm 1.7m         -70dBm 2.8m         -80dBm 6.9m
+  27.0s         -61dBm 1.2m         -76dBm 4.8m         -65dBm 1.7m         -70dBm 2.8m         -81dBm 7.6m
+  28.0s         -61dBm 1.2m         -76dBm 4.8m         -65dBm 1.7m         -73dBm 3.6m         -81dBm 7.6m
+  29.0s         -59dBm 1.0m         -76dBm 4.8m         -65dBm 1.7m         -76dBm 4.8m         -81dBm 7.6m
+  30.1s         -62dBm 1.3m         -76dBm 4.8m         -65dBm 1.7m         -76dBm 4.8m         -81dBm 7.6m
+  31.2s         -62dBm 1.3m         -73dBm 3.6m         -65dBm 1.7m         -76dBm 4.8m         -75dBm 4.4m
+  32.2s         -62dBm 1.3m         -73dBm 3.6m         -64dBm 1.6m         -76dBm 4.8m         -75dBm 4.4m
+  33.2s         -62dBm 1.3m         -73dBm 3.6m         -64dBm 1.6m         -70dBm 2.8m         -75dBm 4.4m
+  34.2s         -61dBm 1.2m         -76dBm 4.8m         -64dBm 1.6m         -76dBm 4.8m         -75dBm 4.4m
+  35.3s         -62dBm 1.3m         -76dBm 4.8m         -64dBm 1.6m         -76dBm 4.8m         -76dBm 4.8m
+  36.3s         -60dBm 1.1m         -73dBm 3.6m         -68dBm 2.3m         -74dBm 4.0m         -71dBm 3.0m
+  37.3s         -61dBm 1.2m         -79dBm 6.3m         -64dBm 1.6m         -71dBm 3.0m         -78dBm 5.8m
+  38.4s         -60dBm 1.1m         -74dBm 4.0m         -65dBm 1.7m         -76dBm 4.8m         -78dBm 5.8m
+  39.4s         -58dBm 0.9m        -85dBm 11.0m         -67dBm 2.1m         -69dBm 2.5m         -76dBm 4.8m
+  40.4s         -62dBm 1.3m         -71dBm 3.0m         -65dBm 1.7m         -75dBm 4.4m         -79dBm 6.3m
+  41.4s         -60dBm 1.1m         -78dBm 5.8m         -67dBm 2.1m         -79dBm 6.3m         -77dBm 5.2m
+  42.5s         -60dBm 1.1m         -80dBm 6.9m         -64dBm 1.6m         -74dBm 4.0m         -74dBm 4.0m
+  43.5s         -59dBm 1.0m         -73dBm 3.6m         -66dBm 1.9m         -77dBm 5.2m         -74dBm 4.0m
+  44.5s         -61dBm 1.2m         -78dBm 5.8m         -65dBm 1.7m         -75dBm 4.4m         -74dBm 4.0m
+  45.5s         -61dBm 1.2m         -80dBm 6.9m         -65dBm 1.7m         -71dBm 3.0m         -71dBm 3.0m
+  46.6s         -60dBm 1.1m         -73dBm 3.6m         -69dBm 2.5m         -75dBm 4.4m         -71dBm 3.0m
+  47.6s         -60dBm 1.1m         -78dBm 5.8m         -65dBm 1.7m         -77dBm 5.2m         -70dBm 2.8m
+  48.6s         -60dBm 1.1m         -81dBm 7.6m         -66dBm 1.9m         -75dBm 4.4m         -74dBm 4.0m
+  49.6s         -61dBm 1.2m         -77dBm 5.2m         -66dBm 1.9m         -77dBm 5.2m         -71dBm 3.0m
+  50.6s         -60dBm 1.1m         -77dBm 5.2m         -66dBm 1.9m         -75dBm 4.4m         -74dBm 4.0m
+  51.7s         -60dBm 1.1m         -78dBm 5.8m         -68dBm 2.3m         -78dBm 5.8m         -74dBm 4.0m
+  52.7s         -60dBm 1.1m         -73dBm 3.6m         -65dBm 1.7m         -78dBm 5.8m         -75dBm 4.4m
+  53.7s         -61dBm 1.2m         -73dBm 3.6m         -68dBm 2.3m         -78dBm 5.8m         -71dBm 3.0m
+  54.7s         -60dBm 1.1m         -81dBm 7.6m         -65dBm 1.7m         -71dBm 3.0m         -75dBm 4.4m
+  55.8s         -60dBm 1.1m         -77dBm 5.2m         -66dBm 1.9m         -77dBm 5.2m         -70dBm 2.8m
+  56.8s         -60dBm 1.1m         -73dBm 3.6m         -68dBm 2.3m         -71dBm 3.0m         -70dBm 2.8m
+  57.8s         -60dBm 1.1m         -81dBm 7.6m         -64dBm 1.6m         -75dBm 4.4m         -71dBm 3.0m
+  58.8s         -60dBm 1.1m         -73dBm 3.6m         -64dBm 1.6m         -71dBm 3.0m         -71dBm 3.0m
+  59.9s         -60dBm 1.1m         -79dBm 6.3m         -65dBm 1.7m         -74dBm 4.0m         -71dBm 3.0m
