@@ -159,7 +159,7 @@ String   currentFile   = "";
 volatile bool bleScanning = false;
 
 // ── Multi-screen display & log ────────────────────────────────────────────────
-static int  currentScreen  = 0;   // 0=main 1=waiter 2=rec 3=BLE T1-3 4=BLE T4-5 5=status 6=CPU 7=speedtest 8=logs
+static int  currentScreen  = 0;   // 0=main 1=waiter 2=rec 3=BLE T1-3 4=BLE T4-5 5=status 6=CPU 7=speedtest 8=logs 9=motor test
 static volatile int pendingPSRAM = 0;  // segments in PSRAM pipeline (queued or uploading)
 static volatile int pendingSD    = 0;  // WAV files on SD waiting to upload
 
@@ -1587,7 +1587,7 @@ void updateDisplay() {
       oled.setCursor(0, 25); oled.print("3s:rerun");
     }
 
-  } else {
+  } else if (currentScreen == 8) {
     if (xSemaphoreTake(logMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
       for (int i = 1; i <= 4; i++) {
         int slot = (logIdx + i) % LOG_LINES;
@@ -1599,6 +1599,7 @@ void updateDisplay() {
       xSemaphoreGive(logMutex);
     }
   }
+  // Screen 9: motor test — blank OLED, single press fires buzz
 
   oled.display();
 }
@@ -1944,9 +1945,21 @@ void loop() {
   // Click-count timeout — fire action after 500ms with no new press
   if (g_btnState == 2 && millis() - g_btnStateTime >= 500) {
     if (g_clickCount == 1) {
-      currentScreen = (currentScreen + 1) % 9;
+      if (currentScreen == 9) {
+        // Motor test screen — single press fires buzz instead of advancing
+        g_motorActive = true;
+        digitalWrite(MOTOR_PIN, HIGH); delay(150);
+        digitalWrite(MOTOR_PIN, LOW);
+        delay(50);
+        g_motorActive = false;
+        Wire.end(); Wire.begin(5, 6);
+        oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+        oled.setRotation(2);
+      } else {
+        currentScreen = (currentScreen + 1) % 10;
+      }
     } else if (g_clickCount == 2) {
-      currentScreen = (currentScreen + 8) % 9;  // go back one
+      currentScreen = (currentScreen + 9) % 10;  // go back one
     } else if (g_clickCount == 4) {
       uploadsEnabled = !uploadsEnabled;
       if (uploadsEnabled) xSemaphoreGive(uploadReady);
