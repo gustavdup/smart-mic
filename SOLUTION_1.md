@@ -1,5 +1,7 @@
 # Michelin Insights — Wearable Audio Capture Device
 
+> **Note:** This is an early-stage design document from before the hardware was finalised. Pin assignments, task architecture, button interactions, and many other details differ from the current implementation. See `CLAUDE.md` for the authoritative current state.
+
 ## Overview
 
 Michelin Insights is a restaurant conversation intelligence platform. Waiters wear a small ESP32-S3-based device that continuously records stereo audio, attributes conversations to specific tables via BLE beacons, and uploads encrypted WAV files to a local server for transcription and analytics.
