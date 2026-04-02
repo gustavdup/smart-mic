@@ -63,11 +63,10 @@ if (xSemaphoreTake(beaconsMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
 }
 ```
 
-### 4. Use `kf_dist` on OLED beacon list screen (Screen 2, `updateDisplay()`)
+### 4. Use `kf_dist` on OLED beacon screens (Screens 3 and 4, `updateDisplay()`)
 Change the display line from `s.distance` to `s.kf_dist`:
 ```cpp
-snprintf(line, sizeof(line), "T%d %4ddBm %4.1fm %2lus",
-         i + 1, s.rssi, s.kf_dist, (unsigned long)age);
+snprintf(sbuf, sizeof(sbuf), "%d%3d %3.1fm", i + 1, s.rssi, s.kf_dist);
 ```
 Raw RSSI stays unchanged — useful to keep as ground truth.
 

@@ -12,7 +12,7 @@ WAV filenames, and shown on the OLED waiter screen.
 `name|code` — e.g. `Alice|W01`
 
 - `waiterName` (32 bytes) — display name
-- `waiterCode` (16 bytes) — short code embedded in WAV filename (`rec_YYYYMMDD_HHMMSS_W01.wav`)
+- `waiterCode` (16 bytes) — short code embedded in WAV filename (`rec_YYYYMMDD_HHMMSS_W01_Alice.wav`)
 
 ---
 
@@ -93,24 +93,25 @@ quirc_end(q);               // ~75ms on QVGA
 
 ---
 
-## Beep Feedback
-- **Success:** 2 kHz (120ms) → 2.8 kHz (80ms) two-tone ascending beep
-- **Timeout:** Two 800 Hz beeps
+## Beep / Motor Feedback
+- **Success:** 120ms pulse → 80ms pause → 80ms pulse (ascending feel)
+- **Timeout:** Two 100ms equal pulses
 
 ---
 
 ## Trigger
-Screen 5 (waiter screen, index 4), hold 3s → calls `scanQRCode()`.
+Screen 1 (waiter screen, index 1), hold 3s → calls `scanQRCode()`.
+Screen 1 also supports hold 6s → auto-loads placeholder waiter `John|d03`.
 
 ---
 
 ## Verification
 1. Flash, open Serial monitor
-2. Navigate to Screen 5 — shows waiter name/code or "No waiter set"
-3. Hold 3s — camera initialises, OLED counts down AEC flush then shows "Scan QR code"
+2. Navigate to Screen 1 — shows waiter name/code or "no waiter"
+3. Hold 3s — camera initialises, OLED counts down AEC flush then shows "Scan QR"
 4. Hold a QR code reading `Alice|W01` in front of camera
 5. Serial shows `[qr] Found: Alice|W01` then `[qr] Saved waiter: Alice | W01`
-6. Two-tone beep plays, OLED shows "Waiter set: Alice / W01" for 2s
-7. Screen 5 now shows Alice / W01
-8. Start recording — filename contains `_W01.wav`
+6. Two-pulse motor buzz, OLED shows "Waiter set: Alice / W01" for 2s
+7. Screen 1 now shows Alice / W01
+8. Start recording — filename contains `_W01_Alice.wav`
 9. Power cycle — waiter restored from NVS on boot

@@ -44,15 +44,18 @@ ESP32-S3 iBeacon scanner with stereo audio recording, OLED display, and MinIO up
 - **Do NOT use GPIO43 (D6)** — UART0 TX, idles HIGH, causes constant buzz
 - Patterns: rec start = two 80ms pulses (60ms gap), rec stop = one 200ms pulse
 - QR success = 120ms + 80ms ascending, QR timeout = two 100ms equal pulses
+- **Known issue:** Motor current draw (and inductive kickback on OFF) glitches the OLED over I2C. Hardware fix: 1N4148 flyback diode across motor terminals (cathode to 3.3V) + transistor driver. PoC workaround: `Wire.end()` / `Wire.begin()` reset after pulses.
 
 ## Key Files
 - `firmware/beacon_scanner.ino` — main firmware (active)
-- `firmware/beacon_scanner backup.ino` — old working version (OLED worked, no audio)
+- `firmware/backups/` — older working versions
 - `AUDIO_PIPELINE.md` — audio processing pipeline documentation
 - `app.py` — Flask + SocketIO dashboard (Mac side, port 5001)
 - `templates/index.html` — live BLE dashboard UI
 - `parse_ble.py` — extracts BLE snapshot log from WAV, saves to `ble_logs/` folder
 - `CPU_LOAD_TRACKING.md` — design notes on idle-hook CPU measurement and core pinning
+- `QR_CODE_SCANNER.md` — QR scanning implementation notes
+- `Kalman.md` — plan for Kalman-filtered BLE distance smoothing (not yet implemented)
 
 ## Architecture: PSRAM Double-Buffer Recording
 
@@ -76,11 +79,11 @@ See `AUDIO_PIPELINE.md` for full documentation. Summary:
 Raw 32-bit DMA (ICS-43434, 24-bit MSB-aligned)
   → Extract: (int32_t)(rawBuf >> 8) / 256.0f  → normalised 16-bit float
   → DC blocker (~10Hz, alpha=0.9992) — both channels
-  → 2-pole high-pass (~80Hz, alpha=0.9972 cascaded) — both channels
+  → 3-pole high-pass (~80Hz, alpha=0.9972 cascaded) — both channels
   → Gain + soft limiter → int16_t output
 ```
 
-Gains: `MIC_GAIN_L=4` (table-facing), `MIC_GAIN_R=6` (waiter-facing — identical pipeline, slightly louder).
+Gains: `MIC_GAIN_L=4` (table-facing), `MIC_GAIN_R=4` (waiter-facing — same gain, adjust R upward if waiter channel is quieter).
 
 ## Critical Bug Fixes Applied
 
@@ -102,6 +105,11 @@ Built-in PDM mic replaced with external Adafruit ICS-43434 stereo pair. Uses `dr
 - 24 valid bits MSB-aligned in 32-bit frame. Extract with `(int32_t)(rawBuf[i] >> 8) / 256.0f` — keeps full 24-bit resolution normalised to 16-bit float scale
 - `rawBuf[i*2]` = R slot (mic2, SEL=3V3), `rawBuf[i*2+1]` = L slot (mic1, SEL=GND)
 - Both mics share DATA line — SEL=GND tri-states during R slot, SEL=3V3 tri-states during L slot
+
+### Motor double-buzz causing OLED power glitch
+Motor pulses existed in both the button handler (blocking `delay()`) and `recordingTask` (`vTaskDelay()`). Overlapping current draw crashed the OLED power rail.
+
+**Fix:** Motor pulses only in `recordingTask`. Button handler sets `isRecording = true` then returns immediately.
 
 ### GPIO14 (PDM_PWR / CAM_PIN_Y6)
 Must be set LOW before `esp_camera_init()` in `scanQRCode()` and restored HIGH after `esp_camera_deinit()`.
@@ -156,7 +164,7 @@ Calling `tcp.setNoDelay(true)` before `tcp.connect()` has no effect.
 `driver/i2s_std.h`, `driver/temperature_sensor.h`, `esp_task_wdt.h`, `quirc/quirc.h` show "cannot open source file" in VSCode. Compile fine in Arduino IDE — ignore.
 
 ### Audio saturation from >> 8 without normalisation
-`>> 8` gives 24-bit range (±8.3M). With gain 4–6 this saturated the soft limiter entirely.
+`>> 8` gives 24-bit range (±8.3M). With gain 4 this saturated the soft limiter entirely.
 
 **Fix:** divide by 256.0f after shift: `(float)(int32_t)(rawBuf[i] >> 8) / 256.0f` — normalises to 16-bit scale while preserving sub-LSB float precision.
 
@@ -168,33 +176,35 @@ Calling `tcp.setNoDelay(true)` before `tcp.connect()` has no effect.
 | NimBLE host | 0 | ~21 | — | |
 | `uploadTask` | 0 | 1 | 20480 | Co-located with WiFi/lwIP — do NOT move to Core 1 |
 | `recordingTask` | 1 | 2 | 12288 | Uncontested — preempts loop() |
-| `loop()` | 1 | 1 | — | Display, button, BLE queue drain |
+| `loop()` | 1 | 1 | 32768 | Display, button, BLE queue drain (SET_LOOP_TASK_STACK_SIZE) |
 
 **Core 0 at 99% during upload is expected** — WiFi/BLE drivers are higher priority and still preempt uploadTask.
 
-## OLED Screens (8 screens, 64×32, cycle with single click)
+## OLED Screens (9 screens, 64×32, cycle with single click)
 
 All screens rendered on the 64×32 Adafruit SSD1306 (`oled.setRotation(2)` for 180° enclosure mount). 10 chars wide, 4 lines at y=1/9/17/25.
 
-**Screen 0:** Waiter — code, name, `3s:scan QR`, `6s:demo`. Hold 3s → scan QR. Hold 6s → load placeholder `John|d03`. Rec blink dot top-right when recording.
+**Screen 0 (main):** Recording ON/OFF with 3s hint, waiter `W:name`, UL speed or `UL: idle`, SD pending. Hold 3s → start/stop recording. Rec blink dot (r=2) top-right when recording.
 
-**Screen 1:** Recording status — B0/B1 PSRAM state (REC/UPL/rdy/idl/fre) + fill in KB or MB (e.g. `1.8M`), UPL speed or `UPL:idle`, SD pend count. Hold 3s → start/stop recording.
+**Screen 1 (waiter):** Waiter code, name, `3s:scan QR`, `6s:demo`. Hold 3s → scan QR. Hold 6s → load placeholder `John|d03`. Rec blink dot (r=2) top-right when recording.
 
-**Screen 2:** BLE beacons 1–3 — format `1-70 3.2m` (no T prefix, space between dB and metres). Stale shown as `1 stale`, inactive as `1 --`.
+**Screen 2 (PSRAM):** B0/B1 PSRAM state (REC/UPL/rdy/idl/fre) + fill in KB or MB (e.g. `1.8M`), UL speed or `UL:idle`, SD pend count. Hold 3s → start/stop recording.
 
-**Screen 3:** BLE beacons 4–5 + R/B/U/W status lines.
+**Screen 3:** BLE beacons 1–3 — format `1-70 3.2m` (no T prefix, space between dB and metres). Stale shown as `1 stale`, inactive as `1 --`.
 
-**Screen 4:** System status — REC/BLE/UPL/WiFi flags, PSRAM+SD pending, waiter name|code.
+**Screen 4:** BLE beacons 4–5.
 
-**Screen 5:** CPU — C0 load %, C1 load % on separate lines, die temp, upload KB/s if active.
+**Screen 5:** System status — R/B/U/W flags, PSRAM+SD pending, waiter name|code.
 
-**Screen 6:** Speedtest — hold 3s to run. Live Mbps + KB/total progress. Press to cancel. Results persist.
+**Screen 6:** CPU — C0 load %, C1 load % on separate lines, die temp, UL KB/s if active.
 
-**Screen 7:** Activity log — 4 most recent entries, oldest top, newest bottom.
+**Screen 7:** Speedtest — hold 3s to run. Live Mbps + KB/total progress. Press to cancel. Results persist.
 
-**Hold progress bar:** `oled.fillRect()` bottom row (y=30, 2px, 64px wide). Shown on screens 0, 1, 6. Full at 3s (screens 1, 6) or 6s (screen 0). Tick mark at x=32 on screen 0 (3s QR threshold).
+**Screen 8:** Activity log — 4 most recent entries, oldest top, newest bottom.
 
-**Rec blink dot:** `oled.fillCircle()` top-right, toggles each 500ms display cycle when recording. Screen 0 only.
+**Hold progress bar:** `oled.fillRect()` bottom row (y=30, 2px, 64px wide). Shown on screens 0, 1, 2, 7. Full at 3s (screens 0, 2, 7) or 6s (screen 1). Tick mark at x=32 on screen 1 (3s QR threshold).
+
+**Rec blink dot:** `oled.fillCircle(60, 4, 2, WHITE)` — radius 2, top-right corner. Shown on screens 0 and 1.
 
 **PSRAM fill display:** Shows `###K` below 1000KB, `#.#M` at 1000KB and above.
 
@@ -206,7 +216,7 @@ Split into two atomic counters, protected by `portENTER_CRITICAL_SAFE(&_pend_mux
 ## WiFi Lifecycle
 - **Startup:** Connect → NTP sync → `WiFi.mode(WIFI_OFF)` (after BLE init)
 - **Upload:** `WiFi.mode(WIFI_STA)` → connect → 500ms settle → upload queue drain → `WiFi.mode(WIFI_OFF)`
-- **Speedtest:** Same as upload, triggered manually from screen 6 (hold 3s). Button press cancels.
+- **Speedtest:** Same as upload, triggered manually from screen 7 (hold 3s). Button press cancels.
 
 ## SD Card Config File
 Loaded at boot from `/config.txt` on SD, saved to NVS. On subsequent boots without the file, values restored from NVS.
@@ -260,11 +270,11 @@ Custom `ble_` chunk appended after audio data in PSRAM before upload. 34 bytes/s
 ## Button Interactions
 | Action | Result |
 |--------|--------|
-| Single click | Next screen (0→1→...→7→0, fires 500ms after release) |
-| Double click | Previous screen (7→6→...→0→7) |
-| 4 rapid clicks | Toggle uploads on/off — shows "UPL enabled" / "UPL off" for 1s then returns |
-| Hold 3s | Screen 0: scan QR. Screen 1: start/stop recording (requires waiter). Screen 6: run speedtest. |
-| Hold 6s | Screen 0 only: load placeholder waiter `John\|d03` (auto-fires, no release needed) |
+| Single click | Next screen (0→1→...→8→0, fires 500ms after release) |
+| Double click | Previous screen (8→7→...→0→8) |
+| 4 rapid clicks | Toggle uploads on/off — shows "UL enabled" / "UL off" for 1s then returns |
+| Hold 3s | Screen 0: start/stop recording. Screen 1: scan QR. Screen 2: start/stop recording. Screen 7: run speedtest. |
+| Hold 6s | Screen 1 only: load placeholder waiter `John\|d03` (auto-fires, no release needed) |
 | Press during speedtest | Cancel speedtest immediately |
 
 Button state machine: `g_btnState` 0=idle, 1=down, 2=up(counting). `g_clickCount` tracks rapid clicks in current sequence.
@@ -292,12 +302,12 @@ Both must stay in sync. After every edit: `cp "firmware/beacon_scanner.ino" ~/Do
 
 ## QR Code Scanning (Waiter Assignment)
 
-**Status: Working.** Screen 0, hold 3s → `scanQRCode()`.
+**Status: Working.** Screen 1 (waiter screen), hold 3s → `scanQRCode()`.
 
 QR format: `name|code` (e.g. `Alice|W01`). Saved to NVS namespace `"cfg"`, restored on boot.
 WAV filename: `rec_YYYYMMDD_HHMMSS_CODE_NAME.wav`.
-Placeholder waiter `John|d03` via 6s hold on screen 0.
-Recording cannot start without a waiter — error shown, redirects to screen 0.
+Placeholder waiter `John|d03` via 6s hold on screen 1.
+Recording cannot start without a waiter — error shown, redirects to screen 1.
 
 ### What makes QR work
 - `PIXFORMAT_GRAYSCALE` + `FRAMESIZE_QVGA` (320×240) — quirc needs raw pixels
@@ -324,4 +334,4 @@ Recording cannot start without a waiter — error shown, redirects to screen 0.
 - End-to-end verification: 3+ segments recording + uploading without crash
 - Verify BLE chunk present in all uploaded files via parse_ble.py
 - Remove dead code: `createWAV`, `finalizeWAV`, `writeBLEChunk`
-- Add transistor circuit (2N2222 + 1kΩ) for motor in first prototype
+- Add transistor circuit (2N2222 + 1kΩ) + flyback diode (1N4148) for motor in first prototype

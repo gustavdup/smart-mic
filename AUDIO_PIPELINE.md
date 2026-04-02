@@ -27,14 +27,14 @@ ICS-43434 (24-bit, 32-bit frame)
     vibration and movement
         │
         ▼
-[3] 2-Pole High-Pass (~80Hz)      ← both channels
-    Cascaded IIR — 40dB/decade rolloff
+[3] 3-Pole High-Pass (~80Hz)      ← both channels
+    Cascaded IIR — 60dB/decade rolloff
     Removes handling thuds and
     low-frequency mechanical noise
         │
         ▼
 [4] Gain + Soft Limiter           ← both channels
-    MIC_GAIN_L=4  /  MIC_GAIN_R=6
+    MIC_GAIN_L=4  /  MIC_GAIN_R=4
     Compresses above ±24000 at 15% slope
     Hard constrain at ±32767
         │
@@ -70,7 +70,7 @@ First-order IIR high-pass at ~10Hz. Removes slow DC drift caused by vibration co
 
 ---
 
-### [3] 2-Pole High-Pass Filter (~80Hz)
+### [3] 3-Pole High-Pass Filter (~80Hz)
 ```cpp
 const float HP_ALPHA = 0.9972f;  // ~80Hz cutoff at 16kHz
 
@@ -81,10 +81,16 @@ hpPrevInL = inL; hpPrevOutL = outL;
 // Pole 2 (cascade)
 float s2L = HP_ALPHA * (hp2PrevOutL + outL - hp2PrevInL);
 hp2PrevInL = outL; hp2PrevOutL = s2L; outL = s2L;
+
+// Pole 3 (cascade)
+float s3L = HP_ALPHA * (hp3PrevOutL + outL - hp3PrevInL);
+hp3PrevInL = outL; hp3PrevOutL = s3L; outL = s3L;
 ```
-Two first-order IIR high-pass filters in series — 40dB/decade rolloff. Frequencies below 80Hz are attenuated aggressively without affecting speech content.
+Three first-order IIR high-pass filters in series — 60dB/decade rolloff. Frequencies below 80Hz are attenuated aggressively without affecting speech content.
 
 **Why 80Hz:** Male speech fundamentals start at ~85Hz. Cutting at 80Hz removes almost all handling thuds while keeping all speech. Going higher starts to affect bass in male voices.
+
+**Why 3 poles:** The extra pole vs a 2-pole design gives ~20dB more rejection at 40Hz (thud frequency) with no additional CPU cost — three identical multiply-add chains.
 
 **Single-pole formula:** `y[n] = alpha * (y[n-1] + x[n] - x[n-1])`
 
@@ -93,7 +99,7 @@ Two first-order IIR high-pass filters in series — 40dB/decade rolloff. Frequen
 ### [4] Gain + Soft Limiter
 ```cpp
 #define MIC_GAIN_L  4   // table-facing (ambient)
-#define MIC_GAIN_R  6   // waiter-facing (slightly louder)
+#define MIC_GAIN_R  4   // waiter-facing
 
 auto softClip = [](float x) -> int16_t {
   const float T = 24000.0f;
@@ -104,7 +110,7 @@ auto softClip = [](float x) -> int16_t {
 audioBuf[i * 2]     = softClip(outL * MIC_GAIN_L);
 audioBuf[i * 2 + 1] = softClip(outR * MIC_GAIN_R);
 ```
-Both channels use identical processing — same pipeline, same limiter. R is just 50% louder (gain 6 vs 4) since the waiter mic is the primary speech channel.
+Both channels use identical gain (4) and the same limiter. Both mics are equally sensitive in the current tuning — adjust `MIC_GAIN_R` upward if the waiter channel is consistently quieter than the table channel.
 
 Below ±24000 the signal passes through unchanged. Above ±24000 the excess is compressed at 15% slope — loud sounds squashed rather than hard-clipped. Hard constrain at ±32767 is the final safety net.
 
@@ -140,6 +146,8 @@ float hpPrevInL,  hpPrevOutL;   // HP pole 1, left
 float hpPrevInR,  hpPrevOutR;   // HP pole 1, right
 float hp2PrevInL, hp2PrevOutL;  // HP pole 2, left
 float hp2PrevInR, hp2PrevOutR;  // HP pole 2, right
+float hp3PrevInL, hp3PrevOutL;  // HP pole 3, left
+float hp3PrevInR, hp3PrevOutR;  // HP pole 3, right
 float dcPrevInL,  dcPrevOutL;   // DC blocker, left
 float dcPrevInR,  dcPrevOutR;   // DC blocker, right
 ```

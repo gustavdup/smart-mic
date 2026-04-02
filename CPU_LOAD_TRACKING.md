@@ -42,9 +42,9 @@ Replace the rolling-window max with a **high-water mark** that only ever increas
 ```cpp
 static uint32_t s_base0 = 1, s_base1 = 1;  // never decreases
 
-// In updateDisplay():
-if (raw0 > s_base0) s_base0 = raw0;  // ratchet up, never down
-cpu0 = 100 - (raw0 * 100 / s_base0);
+// Calibrated once at end of setup():
+s_base0 = max(1u, s_idle0);
+s_base1 = max(1u, s_idle1);
 ```
 
 **Why this works:**
@@ -73,42 +73,19 @@ On Xtensa, individual 32-bit loads/stores are single instructions (no torn reads
 
 ---
 
-## Files changed
+## Core Pinning & Task Distribution
 
-| File | Lines | Change |
-|------|-------|--------|
-| `firmware/beacon_scanner.ino` | ~98–104 | Removed `CPU_WIN`, `s_idleHist[8]`, `s_cpuHistIdx`; added `s_base0`/`s_base1` |
-| `firmware/beacon_scanner.ino` | ~590–602 | Replaced 12-line rolling-max with 8-line sticky-baseline block |
+### What Runs Where
 
----
-
-# Core Pinning & Task Distribution
-
-## What Runs Where
-
-| Task | Core | Priority | Notes |
-|------|------|----------|-------|
-| WiFi driver | 0 | 23 | Always Core 0, not configurable |
-| lwIP TCP/IP | 0 | 18 | Handles TCP segmentation, ACKs, retransmits |
-| NimBLE host | 0 | ~21 | Default `CONFIG_BT_NIMBLE_PINNED_TO_CORE = 0` |
-| BLE controller (hardware) | 0 | hardwired | HCI events fed to NimBLE host |
-| `loop()` | 1 | 1 | Arduino main task, always Core 1 |
-| `recordingTask` | 1 | 2 | I2S DMA + SD writes |
-| `uploadTask` | 0 | 1 | **Recommended: move from Core 1 → Core 0** |
-
----
-
-## Recommended Change
-
-```cpp
-// setup() — split recording and upload across cores
-xTaskCreatePinnedToCore(recordingTask, "rec", 8192,  NULL, 2, NULL, 1);  // Core 1
-xTaskCreatePinnedToCore(uploadTask,    "upl", 12288, NULL, 1, NULL, 0);  // Core 0
-```
-
-**Before:** both tasks on Core 1 — recording and upload compete when a segment finishes mid-recording.
-
-**After:** recording owns Core 1 uncontested; upload runs alongside its natural partners (WiFi driver, lwIP) on Core 0.
+| Task | Core | Priority | Stack | Notes |
+|------|------|----------|-------|-------|
+| WiFi driver | 0 | 23 | — | Always Core 0, not configurable |
+| lwIP TCP/IP | 0 | 18 | — | Handles TCP segmentation, ACKs, retransmits |
+| NimBLE host | 0 | ~21 | — | Default `CONFIG_BT_NIMBLE_PINNED_TO_CORE = 0` |
+| BLE controller (hardware) | 0 | hardwired | — | HCI events fed to NimBLE host |
+| `loop()` | 1 | 1 | 32768 | Arduino main task (SET_LOOP_TASK_STACK_SIZE) |
+| `recordingTask` | 1 | 2 | 12288 | I2S DMA + PSRAM writes — uncontested on Core 1 |
+| `uploadTask` | 0 | 1 | 20480 | Co-located with WiFi/lwIP for best TCP throughput |
 
 ---
 
@@ -118,6 +95,8 @@ During upload, BLE is off — Core 0 has only the WiFi driver and lwIP running. 
 - Eliminates inter-core IPC for every TCP call (lwIP ↔ uploadTask handoff stays on Core 0)
 - Lets recording on Core 1 run completely uncontested
 - WiFi driver (priority 23) and lwIP (priority 18) naturally preempt `uploadTask` (priority 1) when needed — correct for a background upload
+
+**Core 0 at 99% during upload is expected** — WiFi/BLE drivers are higher priority and still preempt uploadTask.
 
 ---
 

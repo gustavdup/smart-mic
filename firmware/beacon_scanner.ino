@@ -1061,6 +1061,7 @@ void recordingTask(void* arg) {
     addLog("REC started");
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(80)); digitalWrite(MOTOR_PIN, LOW); vTaskDelay(pdMS_TO_TICKS(60));
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(80)); digitalWrite(MOTOR_PIN, LOW);
+    vTaskDelay(pdMS_TO_TICKS(50));  // let inductive kickback dissipate before I2C resumes
 
     static int32_t rawBuf[1024];   // 32-bit DMA reads from ICS-43434
     static int16_t audioBuf[1024]; // converted 16-bit samples for WAV
@@ -1170,6 +1171,7 @@ void recordingTask(void* arg) {
     finalizeAndQueueSegment();
     addLog("REC stopped");
     digitalWrite(MOTOR_PIN, HIGH); vTaskDelay(pdMS_TO_TICKS(200)); digitalWrite(MOTOR_PIN, LOW);
+    vTaskDelay(pdMS_TO_TICKS(50));  // let inductive kickback dissipate before I2C resumes
 
     i2s_channel_disable(i2s_rx_handle);
     i2s_del_channel(i2s_rx_handle);
@@ -1392,6 +1394,7 @@ static void scanQRCode() {
     digitalWrite(MOTOR_PIN, HIGH); delay(100);
     digitalWrite(MOTOR_PIN, LOW);
   }
+  delay(50);  // let motor inductive kickback dissipate before I2C
 
   oled.clearDisplay();
   oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
