@@ -23,8 +23,9 @@ minio_secret=minioadmin
 mic_id=mic1
 
 # ── Audio Sample Rate ──────────────────────────────────────────────────────────
-# Format: integer. Recommended: 16000. Min: 8000. Max: 44100.
-# Higher = better voice quality but larger files and more upload bandwidth.
+# Format: integer. Recommended: 16000. Min: 8000. Max: 16000.
+# Max is constrained by PSRAM buffer size (1.95MB) — at 16kHz each buffer holds ~30s.
+# Higher rates reduce max segment duration (e.g. 22050Hz → ~23s, 32000Hz → ~16s).
 # Lower = smaller files, lower quality. 16kHz is standard for speech.
 sample_rate=16000
 
@@ -46,7 +47,10 @@ mic_gain_waiter=4.0
 hp_cutoff_hz=80
 
 # ── Segment Duration ───────────────────────────────────────────────────────────
-# Format: integer. Unit: seconds. Recommended: 30. Min: 10. Max: 120.
+# Format: integer. Unit: seconds. Recommended: 30. Min: 10.
+# Max is determined by PSRAM buffer size (1.95MB) and sample rate:
+#   16000 Hz → max ~30s | 8000 Hz → max ~60s
+# Values above the limit are automatically clamped at boot.
 # How often a recording segment is finalised and uploaded to MinIO.
 # Shorter = more frequent uploads, smaller files, less data lost if something crashes.
 # Longer = fewer uploads, larger files, lower overhead on slow networks.

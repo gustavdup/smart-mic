@@ -121,6 +121,9 @@ Motor pulses existed in both the button handler (blocking `delay()`) and `record
 
 **Fix:** Wire.end()/Wire.begin()/oled.begin()/setRotation(2) immediately after `esp_camera_init()` succeeds, before any OLED calls.
 
+### PSRAM quad-buffer (4 × 1.95MB)
+Switched from 2 × 2MB to 4 × 1.95MB buffers (7.8MB total). `segmentQueue` depth is 3 (`PSRAM_BUF_COUNT - 1`). `activeBuf` cycles 0→1→2→3→0. Up to 3 segments can queue while 1 records.
+
 ### psramFill not zeroed on SD fallback
 When PSRAM upload fails and segment is written to SD, `psramFill[i]` was not cleared. Display showed buffer as `rdy 1.0M` with `SD:0` even though data had moved to SD.
 
@@ -242,6 +245,7 @@ Split into two atomic counters, protected by `portENTER_CRITICAL_SAFE(&_pend_mux
 ## WiFi Lifecycle
 - **Startup:** Connect → NTP sync → `WiFi.mode(WIFI_OFF)` (after BLE init)
 - **Upload:** `WiFi.mode(WIFI_STA)` → connect → 500ms settle → upload queue drain → SD scan → `WiFi.mode(WIFI_OFF)`
+- **SD uploads between segments:** After each PSRAM segment uploads, before WiFi goes off, the SD scan runs and uploads any leftover files. `skipFile` prevents picking up the currently-recording file.
 - **Retry backoff:** If `pendingSD > 0` after WiFi goes off (MinIO unreachable or WiFi fail): retry after 5s (first attempt), then 30s for subsequent attempts. Counter resets when all files upload successfully.
 - **Speedtest:** Same as upload, triggered manually from screen 7 (hold 3s). Button press cancels.
 
