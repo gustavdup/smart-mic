@@ -799,6 +799,7 @@ static void writePSRAMToSD(const SegmentReady& seg) {
 
 // ── Upload task ───────────────────────────────────────────────────────────────
 void uploadTask(void* arg) {
+  static int s_retryCount = 0;  // consecutive failed sessions — 0=first retry(5s), 1+=backoff(30s)
   while (true) {
     // Block until a segment is ready
     xSemaphoreTake(uploadReady, portMAX_DELAY);
@@ -837,8 +838,9 @@ void uploadTask(void* arg) {
           else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
         }
       }
-      // Re-signal after 60s so uploadTask retries SD files without needing a new recording segment
-      vTaskDelay(pdMS_TO_TICKS(60000));
+      { uint32_t ms = (s_retryCount++ == 0) ? 5000 : 30000;
+        Serial.printf("[upload] Retry in %lus (attempt %d)\n", ms/1000, s_retryCount);
+        vTaskDelay(pdMS_TO_TICKS(ms)); }
       xSemaphoreGive(uploadReady);
       continue;
     }
@@ -974,12 +976,15 @@ void uploadTask(void* arg) {
     Serial.println("[wifi] Radio off — BLE active");
     addLog("WiFi off");
 
-    // If SD files remain (MinIO was down), retry after 60s rather than sleeping forever
+    // If SD files remain (MinIO was down), retry with backoff rather than sleeping forever
     { int ps; portENTER_CRITICAL_SAFE(&_pend_mux); ps = pendingSD; portEXIT_CRITICAL_SAFE(&_pend_mux);
       if (ps > 0) {
-        Serial.printf("[upload] %d SD file(s) pending — retry in 60s\n", ps);
-        vTaskDelay(pdMS_TO_TICKS(60000));
+        uint32_t ms = (s_retryCount++ == 0) ? 5000 : 30000;
+        Serial.printf("[upload] %d SD file(s) pending — retry in %lus (attempt %d)\n", ps, ms/1000, s_retryCount);
+        vTaskDelay(pdMS_TO_TICKS(ms));
         xSemaphoreGive(uploadReady);
+      } else {
+        s_retryCount = 0;  // all clear — reset backoff
       }
     }
   }
