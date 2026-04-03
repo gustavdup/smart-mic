@@ -105,6 +105,7 @@ const uint8_t TARGET_UUID[16] = {
 static int   SAMPLE_RATE = 16000;  // configurable via config.txt (sample_rate=)
 static float MIC_GAIN_L  = 4.0f;   // configurable via config.txt (mic_gain_table=)
 static float MIC_GAIN_R  = 4.0f;   // configurable via config.txt (mic_gain_waiter=)
+static char  MIC_ID[16]  = "mic1"; // configurable via config.txt (mic_id=)
 #define SEGMENT_S     30     // Segment and upload every 30 seconds
 
 // ── Beacon / Display ──────────────────────────────────────────────────────────
@@ -998,18 +999,18 @@ String makeFilename() {
     struct tm* t = gmtime(&now);
     char buf[48];
     if (waiterCode[0] != '\0')
-      snprintf(buf, sizeof(buf), "/rec_%04d%02d%02d_%02d%02d%02d_%s_%s.wav",
-               t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+      snprintf(buf, sizeof(buf), "/%s_rec_%04d%02d%02d_%02d%02d%02d_%s_%s.wav",
+               MIC_ID, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
                t->tm_hour, t->tm_min, t->tm_sec, waiterCode, waiterName);
     else
-      snprintf(buf, sizeof(buf), "/rec_%04d%02d%02d_%02d%02d%02d.wav",
-               t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+      snprintf(buf, sizeof(buf), "/%s_rec_%04d%02d%02d_%02d%02d%02d.wav",
+               MIC_ID, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
                t->tm_hour, t->tm_min, t->tm_sec);
     return String(buf);
   }
   if (waiterCode[0] != '\0')
-    return "/rec_fallback_" + String(fileCounter) + "_" + String(waiterCode) + "_" + String(waiterName) + ".wav";
-  return "/rec_fallback_" + String(fileCounter) + ".wav";
+    return "/" + String(MIC_ID) + "_rec_fallback_" + String(fileCounter) + "_" + String(waiterCode) + "_" + String(waiterName) + ".wav";
+  return "/" + String(MIC_ID) + "_rec_fallback_" + String(fileCounter) + ".wav";
 }
 
 // ── Segment finalize helper ───────────────────────────────────────────────────
@@ -1653,6 +1654,7 @@ static const char* loadConfig() {
         else if (key == "sample_rate")  SAMPLE_RATE = val.toInt();
         else if (key == "mic_gain_table")  MIC_GAIN_L = val.toFloat();
         else if (key == "mic_gain_waiter") MIC_GAIN_R = val.toFloat();
+        else if (key == "mic_id")          strncpy(MIC_ID, val.c_str(), sizeof(MIC_ID) - 1);
       }
       f.close();
       fromSD = true;
@@ -1672,6 +1674,7 @@ static const char* loadConfig() {
     prefs.putInt   ("sample_rate",  SAMPLE_RATE);
     prefs.putFloat ("mic_gain_tbl",  MIC_GAIN_L);
     prefs.putFloat ("mic_gain_wtr",  MIC_GAIN_R);
+    prefs.putString("mic_id",        MIC_ID);
     prefs.end();
     Serial.println("[cfg] Saved to NVS");
     return "SD";
@@ -1686,8 +1689,9 @@ static const char* loadConfig() {
       prefs.getString("minio_access", MINIO_ACCESS,  sizeof(MINIO_ACCESS));
       prefs.getString("minio_secret", MINIO_SECRET,  sizeof(MINIO_SECRET));
       SAMPLE_RATE = prefs.getInt  ("sample_rate", SAMPLE_RATE);
-      MIC_GAIN_L  = prefs.getFloat("mic_gain_tbl", MIC_GAIN_L);
-      MIC_GAIN_R  = prefs.getFloat("mic_gain_wtr", MIC_GAIN_R);
+      MIC_GAIN_L  = prefs.getFloat ("mic_gain_tbl", MIC_GAIN_L);
+      MIC_GAIN_R  = prefs.getFloat ("mic_gain_wtr", MIC_GAIN_R);
+      prefs.getString("mic_id", MIC_ID, sizeof(MIC_ID));
       Serial.printf("[cfg] Loaded from NVS — WiFi:%s  MinIO:%s:%d  SR:%d\n", WIFI_SSID, MINIO_HOST, MINIO_PORT, SAMPLE_RATE);
       prefs.end();
       return "NVS";
