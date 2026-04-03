@@ -965,6 +965,15 @@ void uploadTask(void* arg) {
     WiFi.mode(WIFI_OFF);
     Serial.println("[wifi] Radio off — BLE active");
     addLog("WiFi off");
+
+    // If SD files remain (MinIO was down), retry after 60s rather than sleeping forever
+    { int ps; portENTER_CRITICAL_SAFE(&_pend_mux); ps = pendingSD; portEXIT_CRITICAL_SAFE(&_pend_mux);
+      if (ps > 0) {
+        Serial.printf("[upload] %d SD file(s) pending — retry in 60s\n", ps);
+        vTaskDelay(pdMS_TO_TICKS(60000));
+        xSemaphoreGive(uploadReady);
+      }
+    }
   }
 }
 
