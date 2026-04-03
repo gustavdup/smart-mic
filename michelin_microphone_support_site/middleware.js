@@ -6,8 +6,8 @@ export default function middleware(request) {
 
   if (scheme === 'Basic' && encoded) {
     const [user, pass] = atob(encoded).split(':');
-    const validUser    = process.env.BASIC_AUTH_USER ?? 'michelin';
-    const validPass    = process.env.BASIC_AUTH_PASS ?? '';
+    const validUser    = process.env.BASIC_AUTH_USER ?? 'isazi';
+    const validPass    = process.env.BASIC_AUTH_PASS ?? 'michelin';
 
     if (validPass && user === validUser && pass === validPass) {
       return; // authorised — pass through to static file
