@@ -810,6 +810,8 @@ void uploadTask(void* arg) {
       while (xQueueReceive(segmentQueue, &seg, 0) == pdTRUE) {
         PSRAM_DEC();  // leaving PSRAM pipeline
         writePSRAMToSD(seg);  // SD_INC happens inside
+        if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
+        else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
       }
       continue;
     }
@@ -831,6 +833,8 @@ void uploadTask(void* arg) {
         while (xQueueReceive(segmentQueue, &seg, 0) == pdTRUE) {
           PSRAM_DEC();
           writePSRAMToSD(seg);
+          if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
+          else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
         }
       }
       // Re-signal after 60s so uploadTask retries SD files without needing a new recording segment
@@ -869,7 +873,11 @@ void uploadTask(void* arg) {
           if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
           else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
           addLog("UL ok");
-        } else { PSRAM_DEC(); writePSRAMToSD(seg); addLog("UL→SD"); }
+        } else {
+          PSRAM_DEC(); writePSRAMToSD(seg); addLog("UL→SD");
+          if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
+          else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
+        }
       }
     }
 
