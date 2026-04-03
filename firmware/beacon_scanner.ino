@@ -103,8 +103,8 @@ const uint8_t TARGET_UUID[16] = {
 
 // ── Recording ─────────────────────────────────────────────────────────────────
 static int   SAMPLE_RATE = 16000;  // configurable via config.txt (sample_rate=)
-static float MIC_GAIN_L  = 4.0f;   // configurable via config.txt (mic_gain_l=)
-static float MIC_GAIN_R  = 4.0f;   // configurable via config.txt (mic_gain_r=)
+static float MIC_GAIN_L  = 4.0f;   // configurable via config.txt (mic_gain_table=)
+static float MIC_GAIN_R  = 4.0f;   // configurable via config.txt (mic_gain_waiter=)
 #define SEGMENT_S     30     // Segment and upload every 30 seconds
 
 // ── Beacon / Display ──────────────────────────────────────────────────────────
@@ -1651,8 +1651,8 @@ static const char* loadConfig() {
         else if (key == "minio_access") strncpy(MINIO_ACCESS,  val.c_str(), sizeof(MINIO_ACCESS)  - 1);
         else if (key == "minio_secret") strncpy(MINIO_SECRET,  val.c_str(), sizeof(MINIO_SECRET)  - 1);
         else if (key == "sample_rate")  SAMPLE_RATE = val.toInt();
-        else if (key == "mic_gain_l")   MIC_GAIN_L  = val.toFloat();
-        else if (key == "mic_gain_r")   MIC_GAIN_R  = val.toFloat();
+        else if (key == "mic_gain_table")  MIC_GAIN_L = val.toFloat();
+        else if (key == "mic_gain_waiter") MIC_GAIN_R = val.toFloat();
       }
       f.close();
       fromSD = true;
@@ -1670,8 +1670,8 @@ static const char* loadConfig() {
     prefs.putString("minio_access", MINIO_ACCESS);
     prefs.putString("minio_secret", MINIO_SECRET);
     prefs.putInt   ("sample_rate",  SAMPLE_RATE);
-    prefs.putFloat ("mic_gain_l",   MIC_GAIN_L);
-    prefs.putFloat ("mic_gain_r",   MIC_GAIN_R);
+    prefs.putFloat ("mic_gain_tbl",  MIC_GAIN_L);
+    prefs.putFloat ("mic_gain_wtr",  MIC_GAIN_R);
     prefs.end();
     Serial.println("[cfg] Saved to NVS");
     return "SD";
@@ -1686,8 +1686,8 @@ static const char* loadConfig() {
       prefs.getString("minio_access", MINIO_ACCESS,  sizeof(MINIO_ACCESS));
       prefs.getString("minio_secret", MINIO_SECRET,  sizeof(MINIO_SECRET));
       SAMPLE_RATE = prefs.getInt  ("sample_rate", SAMPLE_RATE);
-      MIC_GAIN_L  = prefs.getFloat("mic_gain_l",  MIC_GAIN_L);
-      MIC_GAIN_R  = prefs.getFloat("mic_gain_r",  MIC_GAIN_R);
+      MIC_GAIN_L  = prefs.getFloat("mic_gain_tbl", MIC_GAIN_L);
+      MIC_GAIN_R  = prefs.getFloat("mic_gain_wtr", MIC_GAIN_R);
       Serial.printf("[cfg] Loaded from NVS — WiFi:%s  MinIO:%s:%d  SR:%d\n", WIFI_SSID, MINIO_HOST, MINIO_PORT, SAMPLE_RATE);
       prefs.end();
       return "NVS";
