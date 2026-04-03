@@ -4,126 +4,198 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart Mic Tools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
+    body { font-family: 'Fira Sans', system-ui, sans-serif; }
+    .font-data { font-family: 'Fira Code', 'Courier New', monospace; }
+
     #qrcode img, #qrcode canvas { margin: 0 auto; }
+
+    /* Sticky column setup */
+    .col-sticky { position: sticky; z-index: 10; }
+    thead .col-sticky { z-index: 20; }
+    .col-1 { left: 0px; }
+    .col-2 { left: 148px; }
+    .col-3 { left: 296px; }
+    .col-4 { left: 348px; box-shadow: 3px 0 6px -2px rgba(15,23,42,0.10); }
+    thead .col-4 { box-shadow: 3px 0 6px -2px rgba(15,23,42,0.10); }
+
+    /* Sticky cell bg — must be opaque */
+    thead th { position: sticky; top: 0; }
+
+    /* File group separator */
+    tr.file-first td { border-top: 2px solid #CBD5E1; }
+    tr.file-first td.col-4 { box-shadow: 3px 0 6px -2px rgba(15,23,42,0.10), inset 0 2px 0 0 #CBD5E1; }
+
+    /* Smooth row hover */
+    tbody tr { transition: filter 80ms ease; }
+    tbody tr:hover { filter: brightness(0.965); }
+
+    /* Drag-over state */
+    #drop-zone.drag-over {
+      border-color: #2563EB;
+      background-color: #EFF6FF;
+    }
+
+    /* Scrollbar styling */
+    .table-scroll::-webkit-scrollbar { height: 6px; }
+    .table-scroll::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 3px; }
+    .table-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .table-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* Beacon column group divider */
+    td.beacon-start, th.beacon-start { border-left: 1px solid #E2E8F0; }
+    thead th.beacon-start { border-left: 1px solid #CBD5E1; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen">
 
-  <div class="max-w-2xl mx-auto px-4 py-10">
+  <div class="max-w-screen-xl mx-auto px-6 py-10">
 
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-2xl font-bold text-gray-900">Smart Mic Tools</h1>
-      <p class="text-sm text-gray-500 mt-1">Project Michelin — Prototype</p>
+      <h1 class="text-2xl font-semibold text-slate-900" style="font-family:'Fira Sans',sans-serif">Smart Mic Tools</h1>
+      <p class="text-sm text-slate-400 mt-1">Project Michelin — Prototype</p>
     </div>
 
     <!-- Tabs -->
-    <div class="flex border-b border-gray-200 mb-8">
+    <div class="flex border-b border-slate-200 mb-8">
       <button onclick="showTab('qr')" id="tab-qr"
-        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px">
+        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px cursor-pointer">
         Generate QR Code
       </button>
       <button onclick="showTab('ble')" id="tab-ble"
-        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px">
+        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 -mb-px cursor-pointer">
         Extract BLE Data
       </button>
     </div>
 
     <!-- ── QR Code Tab ─────────────────────────────────────────────────────── -->
     <div id="panel-qr">
-      <p class="text-sm text-gray-600 mb-6">
+      <p class="text-sm text-slate-500 mb-6">
         Generate a QR code to assign a waiter identity to a Smart Mic device.
         Hold the printed code in front of the camera on screen 1.
       </p>
 
-      <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="grid grid-cols-2 gap-4 mb-6 max-w-sm">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Waiter Name</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Waiter Name</label>
           <input id="qr-name" type="text" placeholder="e.g. Alice"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             oninput="updateQR()" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Waiter Code</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Waiter Code</label>
           <input id="qr-code" type="text" placeholder="e.g. W01"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             oninput="updateQR()" />
         </div>
       </div>
 
       <div id="qr-preview-row" class="hidden mb-2">
-        <p class="text-xs text-gray-400">QR content: <span id="qr-content-label" class="font-mono text-gray-600"></span></p>
+        <p class="text-xs text-slate-400">QR content: <span id="qr-content-label" class="font-mono text-slate-600"></span></p>
       </div>
 
-      <div id="qr-container" class="hidden bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center gap-6">
+      <div id="qr-container" class="hidden bg-white border border-slate-200 rounded-xl p-8 flex flex-col items-center gap-6 max-w-xs">
         <div id="qrcode"></div>
         <div class="text-center">
-          <p class="text-base font-semibold text-gray-800" id="qr-display-name"></p>
-          <p class="text-sm text-gray-400" id="qr-display-code"></p>
+          <p class="text-base font-semibold text-slate-800" id="qr-display-name"></p>
+          <p class="text-sm text-slate-400" id="qr-display-code"></p>
         </div>
-        <button onclick="downloadQR()"
-          class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition">
+        <button onclick="downloadQR()" cursor-pointer
+          class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition cursor-pointer">
           Download PNG
         </button>
       </div>
 
-      <div id="qr-placeholder" class="bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-400 text-sm">
+      <div id="qr-placeholder" class="bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center text-slate-400 text-sm max-w-xs">
         Enter a name and code to generate a QR code.
       </div>
     </div>
 
     <!-- ── BLE Data Tab ────────────────────────────────────────────────────── -->
     <div id="panel-ble" class="hidden">
-      <p class="text-sm text-gray-600 mb-6">
-        Upload a WAV file recorded by Smart Mic. The embedded BLE snapshot data
-        will be extracted and displayed.
-      </p>
 
       <!-- Drop zone -->
       <label id="drop-zone"
-        class="block border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition mb-6"
-        ondragover="event.preventDefault()" ondrop="handleDrop(event)">
-        <input id="wav-input" type="file" accept=".wav" class="hidden" onchange="handleFile(this.files[0])" />
-        <p class="text-sm font-medium text-gray-600">Drop a WAV file here, or <span class="text-blue-600 underline">browse</span></p>
-        <p class="text-xs text-gray-400 mt-1">Must be a Smart Mic recording with embedded BLE chunk</p>
+        class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl px-8 py-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors mb-6"
+        ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input id="wav-input" type="file" accept=".wav" multiple class="hidden" onchange="handleFileInput(this.files)" />
+        <svg class="w-8 h-8 text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="text-sm font-medium text-slate-600">Drop WAV files here, or <span class="text-blue-600 underline">browse</span></p>
+        <p class="text-xs text-slate-400 mt-1">Multiple files supported · Smart Mic recordings with embedded BLE chunk</p>
       </label>
 
-      <!-- Error -->
-      <div id="ble-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-6"></div>
-
-      <!-- Results -->
+      <!-- Results area -->
       <div id="ble-results" class="hidden">
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-sm font-medium text-gray-700" id="ble-summary"></p>
-          <button onclick="exportCSV()"
-            class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium px-4 py-1.5 rounded-lg transition">
-            Export CSV
-          </button>
+
+        <!-- Summary bar -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-800" id="ble-summary"></p>
+            <div id="ble-file-errors" class="mt-2 space-y-1"></div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="clearAll()"
+              class="flex items-center gap-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Clear
+            </button>
+            <button onclick="exportCSV()"
+              class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+              </svg>
+              Export CSV
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-gray-200">
-          <table class="w-full text-xs text-left">
-            <thead class="bg-gray-50 text-gray-500 uppercase tracking-wide">
+        <!-- Table -->
+        <div class="table-scroll overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+          <table class="text-xs text-left border-collapse" style="min-width: 900px">
+            <thead class="bg-slate-100 text-slate-500 uppercase tracking-wide text-[10px] font-semibold">
               <tr>
-                <th class="px-3 py-2.5">Time (s)</th>
-                <th class="px-3 py-2.5">B1 RSSI</th>
-                <th class="px-3 py-2.5">B1 Dist</th>
-                <th class="px-3 py-2.5">B2 RSSI</th>
-                <th class="px-3 py-2.5">B2 Dist</th>
-                <th class="px-3 py-2.5">B3 RSSI</th>
-                <th class="px-3 py-2.5">B3 Dist</th>
-                <th class="px-3 py-2.5">B4 RSSI</th>
-                <th class="px-3 py-2.5">B4 Dist</th>
-                <th class="px-3 py-2.5">B5 RSSI</th>
-                <th class="px-3 py-2.5">B5 Dist</th>
+                <!-- Sticky identity cols -->
+                <th class="col-sticky col-1 bg-slate-100 px-3 py-2.5 whitespace-nowrap" style="min-width:148px; width:148px">File</th>
+                <th class="col-sticky col-2 bg-slate-100 px-3 py-2.5 whitespace-nowrap" style="min-width:148px; width:148px">Date / Time</th>
+                <th class="col-sticky col-3 bg-slate-100 px-3 py-2.5 whitespace-nowrap" style="min-width:52px; width:52px">Mic</th>
+                <th class="col-sticky col-4 bg-slate-100 px-3 py-2.5 whitespace-nowrap" style="min-width:96px; width:96px">Waiter</th>
+                <!-- Data cols -->
+                <th class="px-3 py-2.5 whitespace-nowrap text-slate-400" style="min-width:52px">Time (s)</th>
+                <th class="px-3 py-2.5 whitespace-nowrap beacon-start">B1 RSSI</th>
+                <th class="px-3 py-2.5 whitespace-nowrap">B1 Dist</th>
+                <th class="px-3 py-2.5 whitespace-nowrap beacon-start">B2 RSSI</th>
+                <th class="px-3 py-2.5 whitespace-nowrap">B2 Dist</th>
+                <th class="px-3 py-2.5 whitespace-nowrap beacon-start">B3 RSSI</th>
+                <th class="px-3 py-2.5 whitespace-nowrap">B3 Dist</th>
+                <th class="px-3 py-2.5 whitespace-nowrap beacon-start">B4 RSSI</th>
+                <th class="px-3 py-2.5 whitespace-nowrap">B4 Dist</th>
+                <th class="px-3 py-2.5 whitespace-nowrap beacon-start">B5 RSSI</th>
+                <th class="px-3 py-2.5 whitespace-nowrap">B5 Dist</th>
               </tr>
             </thead>
-            <tbody id="ble-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
+            <tbody id="ble-table-body" class="divide-y divide-slate-100 bg-white"></tbody>
           </table>
         </div>
+
+        <p class="text-xs text-slate-400 mt-2">Scroll right to see all beacon columns · First 4 columns stay fixed</p>
+      </div>
+
+      <!-- Empty state -->
+      <div id="ble-empty" class="bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center">
+        <svg class="w-10 h-10 text-slate-200 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-sm text-slate-400">Drop one or more Smart Mic WAV files above to extract BLE data.</p>
       </div>
     </div>
 
@@ -138,7 +210,7 @@
         btn.classList.toggle('border-blue-600', t === name);
         btn.classList.toggle('text-blue-600',   t === name);
         btn.classList.toggle('border-transparent', t !== name);
-        btn.classList.toggle('text-gray-500',   t !== name);
+        btn.classList.toggle('text-slate-500',  t !== name);
       });
     }
 
@@ -182,7 +254,6 @@
       const canvas = document.querySelector('#qrcode canvas');
       if (!canvas) return;
 
-      // Add white padding + label below QR
       const pad = 20, labelH = 40;
       const out = document.createElement('canvas');
       out.width  = canvas.width  + pad * 2;
@@ -202,58 +273,84 @@
       a.click();
     }
 
-    // ── BLE Parsing ───────────────────────────────────────────────────────────
-    let parsedSnapshots = [];
-    let currentFilename = '';
+    // ── BLE State ─────────────────────────────────────────────────────────────
+    // Each entry: { filename, meta, snapshots, error }
+    // meta: { micId, datetime, waiterCode, waiterName } or null
+    let allFileData = [];
+
+    // ── Drag & Drop ───────────────────────────────────────────────────────────
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      document.getElementById('drop-zone').classList.remove('drag-over');
+    }
 
     function handleDrop(e) {
       e.preventDefault();
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length) handleFiles(files);
     }
 
-    async function handleFile(file) {
-      if (!file) return;
-      currentFilename = file.name.replace(/\.wav$/i, '');
-      document.getElementById('ble-error').classList.add('hidden');
-      document.getElementById('ble-results').classList.add('hidden');
+    function handleFileInput(files) {
+      if (files.length) handleFiles(files);
+    }
 
-      try {
-        parsedSnapshots = await parseBLE(file);
-        renderTable(parsedSnapshots, file.name);
-      } catch (err) {
-        document.getElementById('ble-error').textContent = err.message;
-        document.getElementById('ble-error').classList.remove('hidden');
+    // ── File Processing ───────────────────────────────────────────────────────
+    function parseFilename(filename) {
+      // e.g. mic1_rec_20260403_120000_W01_Alice.wav
+      const m = filename.match(/^(.+?)_rec_(\d{8})_(\d{6})_([^_]+)_(.+?)\.wav$/i);
+      if (!m) return null;
+      const [, micId, date, time, waiterCode, waiterName] = m;
+      const dt = date.slice(0,4) + '-' + date.slice(4,6) + '-' + date.slice(6,8)
+               + ' ' + time.slice(0,2) + ':' + time.slice(2,4);
+      return { micId, datetime: dt, waiterCode, waiterName };
+    }
+
+    async function handleFiles(files) {
+      allFileData = [];
+
+      const sorted = Array.from(files)
+        .filter(f => f.name.toLowerCase().endsWith('.wav'))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      for (const file of sorted) {
+        const meta = parseFilename(file.name);
+        try {
+          const snapshots = await parseBLE(file);
+          allFileData.push({ filename: file.name, meta, snapshots, error: null });
+        } catch (err) {
+          allFileData.push({ filename: file.name, meta, snapshots: [], error: err.message });
+        }
       }
+
+      renderResults();
     }
 
+    // ── BLE Parsing ───────────────────────────────────────────────────────────
     async function parseBLE(file) {
       const buffer = await file.arrayBuffer();
       const view   = new DataView(buffer);
 
-      const riff = readStr(view, 0, 4);
-      if (riff !== 'RIFF') throw new Error('Not a valid WAV file (missing RIFF header).');
-      const wave = readStr(view, 8, 4);
-      if (wave !== 'WAVE') throw new Error('Not a valid WAV file (missing WAVE identifier).');
+      if (readStr(view, 0, 4) !== 'RIFF') throw new Error('Not a valid WAV file (missing RIFF header).');
+      if (readStr(view, 8, 4) !== 'WAVE') throw new Error('Not a valid WAV file (missing WAVE identifier).');
 
-      // Walk RIFF chunks to find 'ble_'
       let offset = 12;
       while (offset + 8 <= view.byteLength) {
         const id   = readStr(view, offset, 4);
         const size = view.getUint32(offset + 4, true);
-
-        if (id === 'ble_') {
-          return parseBLEChunk(view, offset + 8, size);
-        }
+        if (id === 'ble_') return parseBLEChunk(view, offset + 8, size);
         offset += 8 + size;
-        if (size % 2 !== 0) offset++; // RIFF word-alignment padding
+        if (size % 2 !== 0) offset++;
       }
-      throw new Error('No BLE data chunk found. Make sure this is a Smart Mic recording.');
+      throw new Error('No BLE chunk found. Make sure this is a Smart Mic recording.');
     }
 
     function parseBLEChunk(view, start, size) {
-      // Each snapshot: uint32 offset_ms (4) + 5 × (bool active (1) + int8 rssi (1) + float32 distance (4)) = 34 bytes
-      const SNAPSHOT_SIZE = 34;
+      const SNAPSHOT_SIZE = 34; // 4 + 5*(1+1+4)
       const snapshots = [];
       let pos = start;
       const end = start + size;
@@ -262,15 +359,15 @@
         const offset_ms = view.getUint32(pos, true); pos += 4;
         const beacons = [];
         for (let i = 0; i < 5; i++) {
-          const active   = view.getUint8(pos) !== 0;       pos += 1;
-          const rssi     = view.getInt8(pos);               pos += 1;
-          const distance = view.getFloat32(pos, true);      pos += 4;
+          const active   = view.getUint8(pos) !== 0; pos += 1;
+          const rssi     = view.getInt8(pos);         pos += 1;
+          const distance = view.getFloat32(pos, true); pos += 4;
           beacons.push({ active, rssi, distance });
         }
         snapshots.push({ offset_ms, beacons });
       }
 
-      if (snapshots.length === 0) throw new Error('BLE chunk found but contains no snapshots.');
+      if (snapshots.length === 0) throw new Error('BLE chunk is empty.');
       return snapshots;
     }
 
@@ -280,46 +377,137 @@
       return s;
     }
 
-    function renderTable(snapshots, filename) {
-      document.getElementById('ble-summary').textContent =
-        filename + ' — ' + snapshots.length + ' snapshot' + (snapshots.length !== 1 ? 's' : '');
+    // ── Render ────────────────────────────────────────────────────────────────
+    function renderResults() {
+      const goodFiles  = allFileData.filter(f => !f.error);
+      const errorFiles = allFileData.filter(f => f.error);
+      const totalSnaps = goodFiles.reduce((n, f) => n + f.snapshots.length, 0);
 
+      // Summary
+      const parts = [];
+      if (goodFiles.length)  parts.push(goodFiles.length  + ' file' + (goodFiles.length  !== 1 ? 's' : ''));
+      if (totalSnaps)        parts.push(totalSnaps + ' snapshot' + (totalSnaps !== 1 ? 's' : ''));
+      if (errorFiles.length) parts.push(errorFiles.length + ' error' + (errorFiles.length !== 1 ? 's' : ''));
+      document.getElementById('ble-summary').textContent = parts.join(' · ');
+
+      // Per-file errors
+      const errContainer = document.getElementById('ble-file-errors');
+      errContainer.innerHTML = '';
+      errorFiles.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-2.5 py-1.5';
+        div.innerHTML = `<svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><span><span class="font-medium">${esc(f.filename)}</span> — ${esc(f.error)}</span>`;
+        errContainer.appendChild(div);
+      });
+
+      // Table body
       const tbody = document.getElementById('ble-table-body');
       tbody.innerHTML = '';
 
-      snapshots.forEach(snap => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-gray-50';
+      goodFiles.forEach((file, fileIdx) => {
+        const isOdd = fileIdx % 2 === 1;
+        const rowBg  = isOdd ? '#F8FAFC' : '#FFFFFF';
+        const stickyBg = rowBg;
 
-        const timeSec = (snap.offset_ms / 1000).toFixed(1);
-        let html = `<td class="px-3 py-2 text-gray-500">${timeSec}</td>`;
-        snap.beacons.forEach(b => {
-          if (!b.active) {
-            html += `<td class="px-3 py-2 text-gray-300">—</td><td class="px-3 py-2 text-gray-300">—</td>`;
+        file.snapshots.forEach((snap, snapIdx) => {
+          const isFirst = snapIdx === 0;
+          const tr = document.createElement('tr');
+          if (isFirst && fileIdx > 0) tr.classList.add('file-first');
+
+          const timeSec = (snap.offset_ms / 1000).toFixed(1);
+
+          // Build sticky cells (cols 1–4) — shown only on first row of each file
+          const meta = file.meta;
+          let idCells = '';
+
+          if (isFirst) {
+            const fname  = file.filename.replace(/\.wav$/i, '');
+            const dt     = meta ? meta.datetime       : '—';
+            const mic    = meta ? meta.micId          : '—';
+            const waiter = meta ? meta.waiterName     : '—';
+            const wcode  = meta ? ` <span style="color:#94A3B8">${esc(meta.waiterCode)}</span>` : '';
+
+            idCells = `
+              <td class="col-sticky col-1 px-3 py-2 align-top" style="background:${stickyBg}">
+                <span class="font-medium text-slate-800 font-data text-[10px] leading-tight block truncate" style="max-width:132px" title="${esc(file.filename)}">${esc(fname)}</span>
+              </td>
+              <td class="col-sticky col-2 px-3 py-2 align-top font-data text-[10px] text-slate-600 whitespace-nowrap" style="background:${stickyBg}">${esc(dt)}</td>
+              <td class="col-sticky col-3 px-3 py-2 align-top font-data text-[10px] text-slate-600 whitespace-nowrap" style="background:${stickyBg}">${esc(mic)}</td>
+              <td class="col-sticky col-4 px-3 py-2 align-top text-slate-700 whitespace-nowrap" style="background:${stickyBg}">${esc(waiter)}${wcode}</td>`;
           } else {
-            html += `<td class="px-3 py-2 font-mono">${b.rssi}</td>`;
-            html += `<td class="px-3 py-2 font-mono">${b.distance.toFixed(1)}m</td>`;
+            idCells = `
+              <td class="col-sticky col-1" style="background:${stickyBg}"></td>
+              <td class="col-sticky col-2" style="background:${stickyBg}"></td>
+              <td class="col-sticky col-3" style="background:${stickyBg}"></td>
+              <td class="col-sticky col-4" style="background:${stickyBg}"></td>`;
           }
+
+          // Beacon data cells
+          let beaconCells = `<td class="px-3 py-2 font-data text-slate-400 whitespace-nowrap" style="background:${rowBg}">${timeSec}</td>`;
+          snap.beacons.forEach((b, bi) => {
+            const startClass = bi > 0 ? ' beacon-start' : '';
+            if (!b.active) {
+              beaconCells += `<td class="px-3 py-2 font-data text-slate-200 whitespace-nowrap${startClass}" style="background:${rowBg}">—</td><td class="px-3 py-2 font-data text-slate-200 whitespace-nowrap" style="background:${rowBg}">—</td>`;
+            } else {
+              const rssiColor = b.rssi >= -65 ? '#16A34A' : b.rssi >= -80 ? '#2563EB' : '#94A3B8';
+              beaconCells += `<td class="px-3 py-2 font-data whitespace-nowrap${startClass}" style="background:${rowBg};color:${rssiColor}">${b.rssi}</td>`;
+              beaconCells += `<td class="px-3 py-2 font-data text-slate-600 whitespace-nowrap" style="background:${rowBg}">${b.distance.toFixed(1)}m</td>`;
+            }
+          });
+
+          tr.innerHTML = idCells + beaconCells;
+          tbody.appendChild(tr);
         });
-        tr.innerHTML = html;
-        tbody.appendChild(tr);
       });
 
-      document.getElementById('ble-results').classList.remove('hidden');
+      // Toggle visibility
+      const hasAny = allFileData.length > 0;
+      document.getElementById('ble-results').classList.toggle('hidden', !hasAny);
+      document.getElementById('ble-empty').classList.toggle('hidden', hasAny);
     }
 
+    // ── Clear ─────────────────────────────────────────────────────────────────
+    function clearAll() {
+      allFileData = [];
+      document.getElementById('wav-input').value = '';
+      document.getElementById('ble-results').classList.add('hidden');
+      document.getElementById('ble-empty').classList.remove('hidden');
+    }
+
+    // ── Export CSV ────────────────────────────────────────────────────────────
     function exportCSV() {
-      const rows = ['time_s,b1_rssi,b1_dist_m,b2_rssi,b2_dist_m,b3_rssi,b3_dist_m,b4_rssi,b4_dist_m,b5_rssi,b5_dist_m'];
-      parsedSnapshots.forEach(snap => {
-        const t = (snap.offset_ms / 1000).toFixed(3);
-        const cols = snap.beacons.map(b => b.active ? `${b.rssi},${b.distance.toFixed(3)}` : ',');
-        rows.push(t + ',' + cols.join(','));
+      const rows = ['filename,datetime,mic_id,waiter_name,waiter_code,time_s,b1_rssi,b1_dist_m,b2_rssi,b2_dist_m,b3_rssi,b3_dist_m,b4_rssi,b4_dist_m,b5_rssi,b5_dist_m'];
+
+      allFileData.filter(f => !f.error).forEach(file => {
+        const meta = file.meta;
+        const fname    = csvVal(file.filename);
+        const dt       = csvVal(meta ? meta.datetime   : '');
+        const mic      = csvVal(meta ? meta.micId      : '');
+        const wname    = csvVal(meta ? meta.waiterName : '');
+        const wcode    = csvVal(meta ? meta.waiterCode : '');
+
+        file.snapshots.forEach(snap => {
+          const t = (snap.offset_ms / 1000).toFixed(3);
+          const cols = snap.beacons.map(b => b.active ? `${b.rssi},${b.distance.toFixed(3)}` : ',');
+          rows.push([fname, dt, mic, wname, wcode, t, cols.join(',')].join(','));
+        });
       });
+
       const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = currentFilename + '_ble.csv';
+      a.download = 'ble_export_' + new Date().toISOString().slice(0,10) + '.csv';
       a.click();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function esc(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function csvVal(val) {
+      const s = String(val);
+      return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     }
   </script>
 </body>
