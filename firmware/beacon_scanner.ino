@@ -1956,7 +1956,7 @@ void loop() {
                 delay(2000);
                 currentScreen = 1;
               } else {
-                Serial.println("[btn] Start recording"); isRecording = true; stopRequested = false;
+                Serial.println("[btn] Start recording"); g_motorActive = true; isRecording = true; stopRequested = false;
                 updateDisplay();
               }
             } else {
