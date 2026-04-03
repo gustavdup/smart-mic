@@ -185,23 +185,24 @@ static size_t        st_bytes = 0;
 static unsigned long st_ms    = 0;
 static float         st_kbps  = 0;
 
-// ── PSRAM double-buffer recording ─────────────────────────────────────────────
-// Two 2 MB PSRAM buffers. recordingTask writes audio into the active buffer;
-// at each segment boundary it queues the full buffer (WAV header + audio + BLE
-// chunk already patched in) and flips to the other. uploadTask streams the
-// queued buffer directly to MinIO — no SD reads needed.
-// SD is only written as a fallback when WiFi is unavailable or upload fails.
-#define PSRAM_BUF_SIZE  (2UL * 1024 * 1024)   // 2 MB per buffer
+// ── PSRAM quad-buffer recording ───────────────────────────────────────────────
+// Four 1.95 MB PSRAM buffers (7.8 MB total, fits in 8 MB OPI PSRAM).
+// recordingTask writes into activeBuf; at each segment boundary it queues the
+// full buffer and advances activeBuf round-robin (0→1→2→3→0).
+// uploadTask streams queued buffers to MinIO. Up to 3 segments can queue while
+// 1 is being recorded. SD is only written as a fallback.
+#define PSRAM_BUF_SIZE  (1950UL * 1024)        // 1.95 MB per buffer × 4 = 7.8 MB
+#define PSRAM_BUF_COUNT 4
 
 struct SegmentReady {
-  uint8_t* buf;       // pointer to one of psramBuf[0/1]
+  uint8_t* buf;       // pointer to one of psramBuf[0..3]
   size_t   size;      // total bytes: WAV header + audio + BLE chunk
   char     filename[48];
 };
-static QueueHandle_t segmentQueue  = NULL;
-static uint8_t*      psramBuf[2]   = {nullptr, nullptr};
-static size_t        psramFill[2]  = {0, 0};  // audio bytes written (not counting WAV header)
-static int           activeBuf     = 0;
+static QueueHandle_t segmentQueue              = NULL;
+static uint8_t*      psramBuf[PSRAM_BUF_COUNT] = {nullptr, nullptr, nullptr, nullptr};
+static size_t        psramFill[PSRAM_BUF_COUNT]= {0, 0, 0, 0};
+static int           activeBuf                 = 0;
 
 void addLog(const char* msg) {
   if (!logMutex) return;
@@ -664,9 +665,8 @@ static bool uploadFromPSRAM(const SegmentReady& seg) {
                 (unsigned)seg.size);
   isUploading = true;
   // Track which PSRAM buffer is being uploaded so the display can show "UPL"
-  if      (seg.buf == psramBuf[0]) uploadingBuf = 0;
-  else if (seg.buf == psramBuf[1]) uploadingBuf = 1;
-  else                             uploadingBuf = -1;
+  uploadingBuf = -1;
+  for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (seg.buf == psramBuf[i]) { uploadingBuf = i; break; }
   const char* fileHash = "UNSIGNED-PAYLOAD";
 
   time_t now = time(nullptr);
@@ -814,8 +814,7 @@ void uploadTask(void* arg) {
       while (xQueueReceive(segmentQueue, &seg, 0) == pdTRUE) {
         PSRAM_DEC();  // leaving PSRAM pipeline
         writePSRAMToSD(seg);  // SD_INC happens inside
-        if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
-        else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
+        for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (seg.buf == psramBuf[i]) { psramFill[i] = 0; break; }
       }
       continue;
     }
@@ -837,8 +836,7 @@ void uploadTask(void* arg) {
         while (xQueueReceive(segmentQueue, &seg, 0) == pdTRUE) {
           PSRAM_DEC();
           writePSRAMToSD(seg);
-          if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
-          else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
+          for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (seg.buf == psramBuf[i]) { psramFill[i] = 0; break; }
         }
       }
       { uint32_t ms = (s_retryCount++ == 0) ? 5000 : 30000;
@@ -874,14 +872,11 @@ void uploadTask(void* arg) {
         }
         if (ok) {
           PSRAM_DEC();
-          // Clear fill so display shows "free" instead of "ready"
-          if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
-          else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
+          for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (seg.buf == psramBuf[i]) { psramFill[i] = 0; break; }
           addLog("UL ok");
         } else {
           PSRAM_DEC(); writePSRAMToSD(seg); addLog("UL→SD");
-          if      (seg.buf == psramBuf[0]) psramFill[0] = 0;
-          else if (seg.buf == psramBuf[1]) psramFill[1] = 0;
+          for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (seg.buf == psramBuf[i]) { psramFill[i] = 0; break; }
         }
       }
     }
@@ -907,6 +902,14 @@ void uploadTask(void* arg) {
     }
 
     // ── Scan SD for leftover files (from previous sessions or failed uploads) ──
+    // Skip if recording is active — avoid SD SPI contention and picking up live file
+    if (isRecording) {
+      Serial.println("[upload] Recording active — skipping SD scan");
+      WiFi.disconnect(false); WiFi.mode(WIFI_OFF); addLog("WiFi off");
+      vTaskDelay(pdMS_TO_TICKS(5000));
+      xSemaphoreGive(uploadReady);
+      continue;
+    }
     while (true) {
       char nextFile[48] = "";
 
@@ -1072,15 +1075,15 @@ void recordingTask(void* arg) {
       continue;
     }
 
-    if (!psramBuf[0] || !psramBuf[1]) {
-      Serial.println("[rec] PSRAM buffers unavailable — aborting");
-      g_motorActive = false;
-      isRecording = false;
-      continue;
+    { bool ok = true; for (int i = 0; i < PSRAM_BUF_COUNT; i++) if (!psramBuf[i]) ok = false;
+      if (!ok) {
+        Serial.println("[rec] PSRAM buffers unavailable — aborting");
+        g_motorActive = false; isRecording = false; continue;
+      }
     }
 
-    activeBuf         = 0;
-    psramFill[0]      = psramFill[1] = 0;
+    activeBuf = 0;
+    for (int i = 0; i < PSRAM_BUF_COUNT; i++) psramFill[i] = 0;
     currentFile       = makeFilename();
     uint32_t segStart = millis();
     uint32_t lastSnap = millis();
@@ -1188,7 +1191,7 @@ void recordingTask(void* arg) {
 
       if (millis() - segStart >= (uint32_t)SEGMENT_SECS * 1000) {
         finalizeAndQueueSegment();
-        activeBuf            ^= 1;          // flip to other buffer
+        activeBuf            = (activeBuf + 1) % PSRAM_BUF_COUNT;
         psramFill[activeBuf]  = 0;
         bleLogCount           = 0;
         currentFile           = makeFilename();
@@ -1534,7 +1537,8 @@ void updateDisplay() {
     oled.setCursor(0, 25); oled.print("6s:demo");
 
   } else if (currentScreen == 2) {
-    for (int i = 0; i < 2; i++) {
+    // One line per buffer: "B0:REC 1.8M" or "B0:fre"
+    for (int i = 0; i < PSRAM_BUF_COUNT; i++) {
       const char* state;
       if      (uploadingBuf == i)             state = "UPL";
       else if (activeBuf == i && isRecording) state = "REC";
@@ -1543,19 +1547,13 @@ void updateDisplay() {
       else                                    state = "fre";
       size_t kb = psramFill[i] / 1024;
       if (kb >= 1000)
-        snprintf(sbuf, sizeof(sbuf), "B%d:%-3s%2u.%uM", i, state, (unsigned)(kb/1024), (unsigned)((kb%1024)*10/1024));
+        snprintf(sbuf, sizeof(sbuf), "B%d:%-3s%u.%uM", i, state, (unsigned)(kb/1024), (unsigned)((kb%1024)*10/1024));
+      else if (kb > 0)
+        snprintf(sbuf, sizeof(sbuf), "B%d:%-3s%uK", i, state, (unsigned)kb);
       else
-        snprintf(sbuf, sizeof(sbuf), "B%d:%-3s%3uK", i, state, (unsigned)kb);
+        snprintf(sbuf, sizeof(sbuf), "B%d:%-3s", i, state);
       oled.setCursor(0, 1 + i * 8); oled.print(sbuf);
     }
-    if (isUploading && uploadKBps > 0)
-      snprintf(sbuf, sizeof(sbuf), "%.0fKB/s", uploadKBps);
-    else
-      snprintf(sbuf, sizeof(sbuf), "UL:idle");
-    oled.setCursor(0, 17); oled.print(sbuf);
-    { int ps; portENTER_CRITICAL_SAFE(&_pend_mux); ps = pendingSD; portEXIT_CRITICAL_SAFE(&_pend_mux);
-      snprintf(sbuf, sizeof(sbuf), "SD pend:%d", ps); }
-    oled.setCursor(0, 25); oled.print(sbuf);
 
   } else if (currentScreen == 3) {
     for (int i = 0; i < 3; i++) {
@@ -1767,15 +1765,18 @@ void setup() {
   logMutex     = xSemaphoreCreateMutex();
   uploadReady  = xSemaphoreCreateBinary();
   beaconQueue  = xQueueCreate(32, sizeof(BeaconData));
-  segmentQueue = xQueueCreate(2, sizeof(SegmentReady));
+  segmentQueue = xQueueCreate(PSRAM_BUF_COUNT - 1, sizeof(SegmentReady));
 
-  // Allocate PSRAM double-buffers — must be enabled: Tools → PSRAM → OPI PSRAM
-  psramBuf[0] = (uint8_t*)ps_malloc(PSRAM_BUF_SIZE);
-  psramBuf[1] = (uint8_t*)ps_malloc(PSRAM_BUF_SIZE);
-  if (!psramBuf[0] || !psramBuf[1])
+  // Allocate PSRAM quad-buffers — must be enabled: Tools → PSRAM → OPI PSRAM
+  bool psramOk = true;
+  for (int i = 0; i < PSRAM_BUF_COUNT; i++) {
+    psramBuf[i] = (uint8_t*)ps_malloc(PSRAM_BUF_SIZE);
+    if (!psramBuf[i]) psramOk = false;
+  }
+  if (!psramOk)
     Serial.println("[psram] FATAL: buffer alloc failed — PSRAM enabled?");
   else
-    Serial.printf("[psram] Buffers OK: 2 × %lu KB\n", PSRAM_BUF_SIZE / 1024);
+    Serial.printf("[psram] Buffers OK: %d × %lu KB\n", PSRAM_BUF_COUNT, PSRAM_BUF_SIZE / 1024);
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(MOTOR_PIN, OUTPUT);
@@ -1811,6 +1812,16 @@ void setup() {
 
   // Load config from SD card (if present) or NVS — must be before WiFi.begin()
   const char* cfgSrc = loadConfig();
+
+  // Clamp segment duration to what fits in one PSRAM buffer at the configured sample rate
+  // Buffer = 2MB, stereo 16-bit = SAMPLE_RATE * 4 bytes/sec. Reserve 4KB for WAV header + BLE chunk.
+  { int maxSeg = (int)((PSRAM_BUF_SIZE - 4096) / ((uint32_t)SAMPLE_RATE * 4));
+    if (SEGMENT_SECS > maxSeg) {
+      Serial.printf("[cfg] segment_duration %ds exceeds PSRAM limit at %dHz — clamped to %ds\n",
+                    SEGMENT_SECS, SAMPLE_RATE, maxSeg);
+      SEGMENT_SECS = maxSeg;
+    }
+  }
 
   // Restore waiter identity from NVS (set via QR scan, not config.txt)
   { Preferences wp; wp.begin("cfg", true);
