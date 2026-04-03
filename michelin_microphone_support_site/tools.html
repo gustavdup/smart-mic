@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Michelin Mic Tools</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    /* Prevent scrollbar layout shift when navigating between pages */
+    html { overflow-y: scroll; }
+    body { font-family: 'Fira Sans', system-ui, sans-serif; }
+    .font-data { font-family: 'Fira Code', 'Courier New', monospace; }
+    #qrcode img, #qrcode canvas { margin: 0 auto; }
+
+    /* Drop zone */
+    .drop-zone.drag-over { border-color: #2563EB; background-color: #EFF6FF; }
+
+    /* Scrollbar */
+    .table-scroll::-webkit-scrollbar { height: 5px; }
+    .table-scroll::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 3px; }
+    .table-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    .table-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+    /* Indeterminate progress */
+    @keyframes progress-slide { 0% { transform:translateX(-100%) } 100% { transform:translateX(400%) } }
+    .progress-bar-inner { animation: progress-slide 1.2s ease-in-out infinite; }
+
+    /* File card */
+    .file-card { transition: box-shadow 120ms ease; }
+    .file-card:hover { box-shadow: 0 2px 10px -3px rgba(15,23,42,0.10); }
+
+    /* BLE accordion — grid trick for smooth expand with no layout shift */
+    .ble-accordion { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms ease; }
+    .ble-accordion.open { grid-template-rows: 1fr; }
+    .ble-accordion-inner { overflow: hidden; }
+
+    /* Chevron rotation */
+    .chevron { transition: transform 220ms ease; }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* BLE table inside card */
+    .ble-table th { position: sticky; top: 0; background: #F8FAFC; }
+    .ble-table td, .ble-table th { white-space: nowrap; }
+    .ble-table .t-sticky { position: sticky; left: 0; z-index: 5; }
+    .ble-table th.t-sticky { z-index: 6; }
+    .ble-table .beacon-div { border-left: 1px solid #E2E8F0; }
+    .ble-table thead .beacon-div { border-left: 1px solid #CBD5E1; }
+    tbody tr { transition: filter 80ms ease; }
+    tbody tr:hover { filter: brightness(0.965); }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- Sticky tab nav — matches readme.html -->
+  <div class="border-b border-slate-200 bg-white sticky top-0 z-30">
+    <div class="max-w-screen-xl mx-auto px-6 flex items-end gap-1 h-12">
+      <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest mr-3 pb-3 font-data">Michelin Mic</span>
+      <a href="index.html" id="tab-guide"
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 -mb-px transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+        Device Guide
+      </a>
+      <button onclick="showTab('qr')" id="tab-qr"
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px bg-white whitespace-nowrap cursor-pointer flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
+        QR Code Generator
+      </button>
+      <button onclick="showTab('process')" id="tab-process"
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 -mb-px transition whitespace-nowrap cursor-pointer flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/></svg>
+        Process WAV Files
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-screen-xl mx-auto px-6 py-10">
+
+    <!-- ── QR Code Tab ──────────────────────────────────────────────────────── -->
+    <div id="panel-qr">
+      <div class="mb-8">
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Project Michelin — Proof of Concept</p>
+        <h1 class="text-3xl font-semibold text-slate-900 mb-3">QR Code Generator</h1>
+        <p class="text-base text-slate-500 leading-relaxed max-w-2xl">
+          Generate a QR code to assign a waiter identity to a Michelin Mic device. Hold the printed code in front of the camera on screen 1.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 max-w-sm" style="margin-bottom:0.75rem">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Waiter Name</label>
+          <input id="qr-name" type="text" placeholder="e.g. Alice"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            oninput="updateQR()" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Waiter Code</label>
+          <input id="qr-code" type="text" placeholder="e.g. W01"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            oninput="updateQR()" />
+        </div>
+      </div>
+      <div class="max-w-sm mb-6">
+        <button onclick="randomiseWaiter()"
+          class="w-full flex items-center justify-center gap-2 border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-medium px-3 py-2 rounded-lg transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+          </svg>
+          Randomise
+        </button>
+      </div>
+
+      <div id="qr-preview-row" class="hidden mb-2">
+        <p class="text-xs text-slate-400">QR content: <span id="qr-content-label" class="font-mono text-slate-600"></span></p>
+      </div>
+
+      <div id="qr-container" class="hidden bg-white border border-slate-200 rounded-xl p-8 flex flex-col items-center gap-6 max-w-xs">
+        <div id="qrcode"></div>
+        <div class="text-center">
+          <p class="text-base font-semibold text-slate-800" id="qr-display-name"></p>
+          <p class="text-sm text-slate-400" id="qr-display-code"></p>
+        </div>
+        <button onclick="downloadQR()"
+          class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition cursor-pointer">
+          Download PNG
+        </button>
+      </div>
+
+      <div id="qr-placeholder" class="bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center text-slate-400 text-sm max-w-xs">
+        Enter a name and code to generate a QR code.
+      </div>
+    </div>
+
+    <!-- ── Process WAV Tab ─────────────────────────────────────────────────── -->
+    <div id="panel-process" class="hidden">
+
+      <div class="mb-8">
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Project Michelin — Proof of Concept</p>
+        <h1 class="text-3xl font-semibold text-slate-900 mb-3">Process WAV Files</h1>
+        <p class="text-base text-slate-500 leading-relaxed max-w-2xl">
+          Split stereo recordings into separate table mic and waiter mic channels, and extract BLE beacon location data — all in a single pass.
+        </p>
+      </div>
+
+      <!-- Channel legend -->
+      <div class="flex flex-wrap gap-3 mb-5">
+        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
+          <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+          <span><span class="font-medium">Left channel</span> → <span class="font-data">_table_mic.wav</span></span>
+        </div>
+        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+          <span><span class="font-medium">Right channel</span> → <span class="font-data">_waiter_mic.wav</span></span>
+        </div>
+      </div>
+
+      <!-- Drop zone -->
+      <label id="proc-drop-zone"
+        class="drop-zone flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl px-8 py-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors mb-6"
+        ondragover="dzOver(event,'proc-drop-zone')" ondragleave="dzLeave('proc-drop-zone')" ondrop="dzDrop(event)">
+        <input id="proc-wav-input" type="file" accept=".wav" multiple class="hidden" onchange="procHandleInput(this.files)" />
+        <svg class="w-8 h-8 text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p class="text-sm font-medium text-slate-600">Drop WAV files here, or <span class="text-blue-600 underline">browse</span></p>
+        <p class="text-xs text-slate-400 mt-1">Multiple files · splits channels + extracts BLE data in one pass</p>
+      </label>
+
+      <!-- Toolbar + file list -->
+      <div id="proc-results" class="hidden">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <p class="text-sm font-semibold text-slate-800" id="proc-summary"></p>
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="procClearAll()"
+              class="flex items-center gap-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              Clear
+            </button>
+            <button onclick="exportAllBLE()" id="proc-export-all"
+              class="flex items-center gap-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+              Export All BLE CSV
+            </button>
+            <button onclick="procDownloadAll()" id="proc-dl-all"
+              class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25"/></svg>
+              Download All (ZIP)
+            </button>
+          </div>
+        </div>
+        <div id="proc-file-list" class="space-y-3"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="proc-empty" class="bg-white border border-dashed border-slate-300 rounded-xl p-12 text-center">
+        <svg class="w-10 h-10 text-slate-200 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/>
+        </svg>
+        <p class="text-sm text-slate-400">Drop Michelin Mic WAV files above to split channels and extract BLE data.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Tab switching
+    // ═══════════════════════════════════════════════════════════════════════════
+    function showTab(name) {
+      ['qr', 'process'].forEach(t => {
+        document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+        const btn = document.getElementById('tab-' + t);
+        const active = t === name;
+        btn.classList.toggle('border-blue-600',    active);
+        btn.classList.toggle('text-blue-600',      active);
+        btn.classList.toggle('bg-white',           active);
+        btn.classList.toggle('border-transparent', !active);
+        btn.classList.toggle('text-slate-500',     !active);
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Shared utilities
+    // ═══════════════════════════════════════════════════════════════════════════
+    function readStr(view, off, len) {
+      let s = '';
+      for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(off + i));
+      return s;
+    }
+    function esc(v) {
+      return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function csvVal(v) {
+      const s = String(v);
+      return /[,"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }
+    function parseFilename(filename) {
+      const m = filename.match(/^(.+?)_rec_(\d{8})_(\d{6})_([^_]+)_(.+?)\.wav$/i);
+      if (!m) return null;
+      const [, micId, date, time, waiterCode, waiterName] = m;
+      return {
+        micId, waiterCode, waiterName,
+        datetime: date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+' '+time.slice(0,2)+':'+time.slice(2,4)
+      };
+    }
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // QR Code
+    // ═══════════════════════════════════════════════════════════════════════════
+    const WAITER_NAMES = [
+      'Alice','Amber','Amy','Anna','Bella','Beth','Chloe','Clara','Dana','Diana',
+      'Elena','Ella','Emma','Eva','Fiona','Grace','Hannah','Holly','Iris','Jade',
+      'Jana','Julia','Kate','Laura','Lea','Lena','Lily','Lisa','Lola','Luna',
+      'Maya','Mia','Mila','Mira','Nadia','Nina','Nora','Olivia','Petra','Pia',
+      'Rosa','Ruby','Sara','Sofia','Stella','Tara','Uma','Vera','Zara','Zoe',
+      'Adam','Alex','Ben','Carlo','Chris','Dan','David','Dylan','Emil','Eric',
+      'Finn','Frank','Gary','Hans','Hugo','Ivan','Jack','Jake','James','Jan',
+      'Joel','John','Jonas','Jules','Karl','Luca','Luke','Marc','Mark','Matt',
+      'Max','Mike','Nick','Noah','Omar','Paul','Pete','Remi','Rick','Rob',
+      'Ryan','Sam','Sean','Stefan','Thomas','Tim','Tom','Victor','Will','Yann'
+    ];
+    function randomiseWaiter() {
+      const name = WAITER_NAMES[Math.floor(Math.random() * WAITER_NAMES.length)];
+      const code = 'W' + String(Math.floor(Math.random() * 99) + 1).padStart(2,'0');
+      document.getElementById('qr-name').value = name;
+      document.getElementById('qr-code').value = code;
+      updateQR();
+    }
+    let qrInstance = null;
+    function updateQR() {
+      const name = document.getElementById('qr-name').value.trim();
+      const code = document.getElementById('qr-code').value.trim();
+      if (!name || !code) {
+        document.getElementById('qr-container').classList.add('hidden');
+        document.getElementById('qr-placeholder').classList.remove('hidden');
+        document.getElementById('qr-preview-row').classList.add('hidden');
+        return;
+      }
+      const content = name + '|' + code;
+      document.getElementById('qr-content-label').textContent = content;
+      document.getElementById('qr-preview-row').classList.remove('hidden');
+      document.getElementById('qr-display-name').textContent = name;
+      document.getElementById('qr-display-code').textContent = code;
+      document.getElementById('qr-container').classList.remove('hidden');
+      document.getElementById('qr-placeholder').classList.add('hidden');
+      document.getElementById('qrcode').innerHTML = '';
+      qrInstance = new QRCode(document.getElementById('qrcode'), {
+        text: content, width: 200, height: 200,
+        colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+    function downloadQR() {
+      const name = document.getElementById('qr-name').value.trim();
+      const code = document.getElementById('qr-code').value.trim();
+      const canvas = document.querySelector('#qrcode canvas');
+      if (!canvas) return;
+      const pad = 20, labelH = 40;
+      const out = document.createElement('canvas');
+      out.width = canvas.width + pad*2; out.height = canvas.height + pad*2 + labelH;
+      const ctx = out.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,out.width,out.height);
+      ctx.drawImage(canvas, pad, pad);
+      ctx.fillStyle = '#111111'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(name + '  |  ' + code, out.width/2, canvas.height + pad + 26);
+      const a = document.createElement('a');
+      a.download = 'qr_' + code + '_' + name + '.png';
+      a.href = out.toDataURL('image/png'); a.click();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Process WAV — drag & drop
+    // ═══════════════════════════════════════════════════════════════════════════
+    function dzOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('drag-over'); }
+    function dzLeave(id) { document.getElementById(id).classList.remove('drag-over'); }
+    function dzDrop(e) {
+      e.preventDefault();
+      document.getElementById('proc-drop-zone').classList.remove('drag-over');
+      if (e.dataTransfer.files.length) procHandleInput(e.dataTransfer.files);
+    }
+    function procHandleInput(files) {
+      const sorted = Array.from(files)
+        .filter(f => f.name.toLowerCase().endsWith('.wav'))
+        .sort((a,b) => a.name.localeCompare(b.name));
+      if (sorted.length) procProcessFiles(sorted);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Process WAV — core processing (single ArrayBuffer pass)
+    // ═══════════════════════════════════════════════════════════════════════════
+    // State: array of file descriptors
+    // { filename, meta, status, fatalError,
+    //   info, tableBlob, waiterBlob, splitError,
+    //   snapshots, bleError, expanded }
+    let procFiles = [];
+
+    async function procProcessFiles(files) {
+      procFiles = files.map(f => ({
+        filename: f.name, meta: parseFilename(f.name),
+        status: 'processing', fatalError: null,
+        info: null, tableBlob: null, waiterBlob: null, splitError: null,
+        snapshots: null, bleError: null, expanded: false
+      }));
+      procRender();
+
+      for (let i = 0; i < files.length; i++) {
+        try {
+          const r = await processWAVFile(files[i]);
+          Object.assign(procFiles[i], r, { status: 'ready' });
+        } catch (err) {
+          procFiles[i].status = 'error';
+          procFiles[i].fatalError = err.message;
+        }
+        procRender();
+      }
+    }
+
+    async function processWAVFile(file) {
+      const buffer = await file.arrayBuffer();
+      const view   = new DataView(buffer);
+
+      if (readStr(view,0,4) !== 'RIFF' || readStr(view,8,4) !== 'WAVE')
+        throw new Error('Not a valid WAV file.');
+
+      let sampleRate=0, numChannels=0, bitsPerSample=0;
+      let dataOffset=0, dataSize=0, bleOffset=0, bleSize=0;
+      let splitError = null;
+
+      let off = 12;
+      while (off + 8 <= view.byteLength) {
+        const id   = readStr(view, off, 4);
+        const size = view.getUint32(off + 4, true);
+        if (id === 'fmt ') {
+          if (view.getUint16(off+8,true) !== 1) splitError = 'Only PCM WAV can be split.';
+          else { numChannels=view.getUint16(off+10,true); sampleRate=view.getUint32(off+12,true); bitsPerSample=view.getUint16(off+22,true); }
+        } else if (id === 'data') { dataOffset=off+8; dataSize=size; }
+          else if (id === 'ble_')  { bleOffset=off+8;  bleSize=size; }
+        off += 8 + size + (size%2 ? 1 : 0);
+      }
+
+      const result = { info:null, tableBlob:null, waiterBlob:null, splitError:null, snapshots:null, bleError:null };
+
+      // ── Split ──
+      if (!splitError) {
+        if      (!sampleRate)       splitError = 'No fmt chunk found.';
+        else if (!dataOffset)       splitError = 'No data chunk found.';
+        else if (numChannels !== 2) splitError = `Expected stereo (got ${numChannels}ch).`;
+        else if (bitsPerSample !== 16) splitError = `Only 16-bit WAV (got ${bitsPerSample}-bit).`;
+      }
+      if (!splitError) {
+        const frames = Math.floor(dataSize / 4);
+        result.info = { sampleRate, bitsPerSample, durationSec: frames / sampleRate };
+        const tbl = new Int16Array(frames), wtr = new Int16Array(frames);
+        for (let i=0; i<frames; i++) {
+          tbl[i] = view.getInt16(dataOffset + i*4,     true);
+          wtr[i] = view.getInt16(dataOffset + i*4 + 2, true);
+        }
+        result.tableBlob  = buildStereoWAV(tbl, sampleRate, bitsPerSample);
+        result.waiterBlob = buildStereoWAV(wtr, sampleRate, bitsPerSample);
+      } else {
+        result.splitError = splitError;
+      }
+
+      // ── BLE ──
+      if (!bleOffset) {
+        result.bleError = 'No BLE chunk — this may not be a Smart Mic recording.';
+      } else {
+        try { result.snapshots = parseBLEChunk(view, bleOffset, bleSize); }
+        catch(e) { result.bleError = e.message; }
+      }
+
+      return result;
+    }
+
+    function parseBLEChunk(view, start, size) {
+      const snaps = []; let pos = start;
+      while (pos + 34 <= start + size) {
+        const offset_ms = view.getUint32(pos, true); pos += 4;
+        const beacons = [];
+        for (let i=0; i<5; i++) {
+          const active = view.getUint8(pos)!==0; pos++;
+          const rssi = view.getInt8(pos); pos++;
+          const distance = view.getFloat32(pos,true); pos+=4;
+          beacons.push({active,rssi,distance});
+        }
+        snaps.push({offset_ms, beacons});
+      }
+      if (!snaps.length) throw new Error('BLE chunk is empty.');
+      return snaps;
+    }
+
+    function buildStereoWAV(mono, sampleRate, bitsPerSample) {
+      const nc=2, ba=4, br=sampleRate*4, ds=mono.length*4;
+      const buf = new ArrayBuffer(44+ds); const v = new DataView(buf);
+      const ws = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+      ws(0,'RIFF'); v.setUint32(4,36+ds,true); ws(8,'WAVE');
+      ws(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true);
+      v.setUint16(22,nc,true); v.setUint32(24,sampleRate,true);
+      v.setUint32(28,br,true); v.setUint16(32,ba,true); v.setUint16(34,bitsPerSample,true);
+      ws(36,'data'); v.setUint32(40,ds,true);
+      let p=44;
+      for(let i=0;i<mono.length;i++) { v.setInt16(p,mono[i],true); p+=2; v.setInt16(p,mono[i],true); p+=2; }
+      return new Blob([buf],{type:'audio/wav'});
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Process WAV — rendering
+    // ═══════════════════════════════════════════════════════════════════════════
+    function procRender() {
+      const ready   = procFiles.filter(f => f.status === 'ready');
+      const errors  = procFiles.filter(f => f.status === 'error');
+      const totalSnaps = ready.reduce((n,f) => n + (f.snapshots?.length||0), 0);
+
+      const parts = [procFiles.length + ' file' + (procFiles.length!==1?'s':'')];
+      if (ready.length)  parts.push(ready.length + ' ready');
+      if (errors.length) parts.push(errors.length + ' error' + (errors.length!==1?'s':''));
+      if (totalSnaps)    parts.push(totalSnaps + ' BLE snapshot' + (totalSnaps!==1?'s':''));
+      document.getElementById('proc-summary').textContent = parts.join(' · ');
+
+      const hasReady = ready.length > 0;
+      const hasBLE = ready.some(f => f.snapshots?.length);
+      document.getElementById('proc-dl-all').disabled = !hasReady;
+      document.getElementById('proc-dl-all').classList.toggle('opacity-40', !hasReady);
+      document.getElementById('proc-export-all').disabled = !hasBLE;
+      document.getElementById('proc-export-all').classList.toggle('opacity-40', !hasBLE);
+
+      const list = document.getElementById('proc-file-list');
+      list.innerHTML = '';
+      procFiles.forEach((f, idx) => {
+        const card = document.createElement('div');
+        card.className = 'file-card bg-white border border-slate-200 rounded-xl overflow-hidden';
+        card.id = 'card-' + idx;
+        card.innerHTML = buildCardHTML(f, idx);
+        list.appendChild(card);
+      });
+
+      document.getElementById('proc-results').classList.remove('hidden');
+      document.getElementById('proc-empty').classList.add('hidden');
+    }
+
+    function buildCardHTML(f, idx) {
+      const base = f.filename.replace(/\.wav$/i,'');
+      const meta = f.meta;
+
+      // ── Status badge ──
+      const badges = {
+        processing: `<span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-100 rounded-full px-2 py-0.5"><span class="w-1.5 h-1.5 bg-slate-300 rounded-full animate-pulse"></span>Processing…</span>`,
+        error:      `<span class="inline-flex items-center gap-1 text-[10px] font-medium text-red-600 bg-red-50 border border-red-100 rounded-full px-2 py-0.5"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>Error</span>`,
+        ready:      `<span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>Ready</span>`
+      };
+
+      // ── Header ──
+      let html = `<div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <p class="text-xs font-medium text-slate-700 font-data truncate" title="${esc(f.filename)}">${esc(base)}</p>
+        ${badges[f.status]}
+      </div>`;
+
+      if (f.status === 'error') {
+        html += `<div class="px-4 pb-3.5 text-xs text-red-500">${esc(f.fatalError)}</div>`;
+        return html;
+      }
+
+      if (f.status === 'processing') {
+        html += `<div class="mx-4 mb-3.5 h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div class="progress-bar-inner h-full w-1/4 bg-blue-400 rounded-full"></div></div>`;
+        return html;
+      }
+
+      // ── Meta chips (ready) ──
+      const chips = [];
+      if (meta?.datetime) chips.push(`<span class="font-data">${esc(meta.datetime)}</span>`);
+      if (meta?.micId)    chips.push(`<span class="font-data">${esc(meta.micId)}</span>`);
+      if (meta?.waiterName) chips.push(`${esc(meta.waiterName)} <span class="text-slate-400">${esc(meta.waiterCode)}</span>`);
+      if (f.info) {
+        chips.push(`${(f.info.sampleRate/1000).toFixed(0)} kHz`);
+        chips.push(`${f.info.durationSec.toFixed(1)}s`);
+      }
+      if (chips.length) {
+        html += `<div class="px-4 pb-3 flex flex-wrap gap-1.5">
+          ${chips.map(c=>`<span class="inline-block bg-slate-50 border border-slate-200 rounded-md px-2 py-0.5 text-[10px] text-slate-500">${c}</span>`).join('')}
+        </div>`;
+      }
+
+      // ── Action row ──
+      html += `<div class="border-t border-slate-100 px-4 py-2.5 flex items-center gap-2 flex-wrap">`;
+
+      // Split downloads
+      if (f.tableBlob) {
+        html += `<button onclick="procDlOne(${idx},'table')"
+          class="flex items-center gap-1.5 border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600 hover:text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          Table Mic</button>`;
+        html += `<button onclick="procDlOne(${idx},'waiter')"
+          class="flex items-center gap-1.5 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          Waiter Mic</button>`;
+      } else if (f.splitError) {
+        html += `<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">${esc(f.splitError)}</span>`;
+      }
+
+      // BLE toggle
+      if (f.snapshots?.length) {
+        const snapCount = f.snapshots.length;
+        html += `<button onclick="toggleBLE(${idx})" id="ble-btn-${idx}"
+          class="flex items-center gap-1.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-500 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+          <svg class="w-3 h-3 text-violet-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+          BLE · ${snapCount} row${snapCount!==1?'s':''}
+          <svg class="chevron w-3 h-3" id="chev-${idx}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </button>`;
+      } else if (f.bleError) {
+        html += `<span class="text-[10px] text-slate-400">${esc(f.bleError)}</span>`;
+      }
+
+      // Download ZIP — pushed to the right
+      if (f.tableBlob || f.waiterBlob) {
+        html += `<button onclick="procDlZip(${idx})"
+          class="flex items-center gap-1.5 ml-auto border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-500 hover:text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Download WAVs + BLE CSV as ZIP">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25"/></svg>
+          ZIP
+        </button>`;
+      }
+
+      html += `</div>`;
+
+      // ── BLE accordion ──
+      if (f.snapshots?.length) {
+        const openClass = f.expanded ? ' open' : '';
+        html += `<div class="ble-accordion${openClass}" id="ble-acc-${idx}">
+          <div class="ble-accordion-inner">
+            <div class="border-t border-slate-100 px-4 pt-3 pb-1">
+              <div class="table-scroll overflow-x-auto rounded-lg border border-slate-100">
+                ${buildBLETable(f.snapshots)}
+              </div>
+              <div class="flex justify-end pt-2 pb-2">
+                <button onclick="exportFileBLE(${idx})"
+                  class="flex items-center gap-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                  Export this file's BLE CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      return html;
+    }
+
+    function buildBLETable(snapshots) {
+      const rowBg = ['#FFFFFF','#F8FAFC'];
+      let rows = snapshots.map((snap, i) => {
+        const bg = rowBg[i%2];
+        const t = (snap.offset_ms/1000).toFixed(1);
+        let cells = `<td class="ble-table t-sticky px-3 py-1.5 font-data text-[11px] text-slate-400" style="background:${bg}">${t}</td>`;
+        snap.beacons.forEach((b, bi) => {
+          const dc = bi > 0 ? ' beacon-div' : '';
+          if (!b.active) {
+            cells += `<td class="px-3 py-1.5 font-data text-[11px] text-slate-200${dc}" style="background:${bg}">—</td><td class="px-3 py-1.5 font-data text-[11px] text-slate-200" style="background:${bg}">—</td>`;
+          } else {
+            const rc = b.rssi>=-65?'#16A34A':b.rssi>=-80?'#2563EB':'#94A3B8';
+            cells += `<td class="px-3 py-1.5 font-data text-[11px]${dc}" style="background:${bg};color:${rc}">${b.rssi}</td>`;
+            cells += `<td class="px-3 py-1.5 font-data text-[11px] text-slate-600" style="background:${bg}">${b.distance.toFixed(1)}m</td>`;
+          }
+        });
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      return `<table class="ble-table text-left border-collapse" style="min-width:600px">
+        <thead class="bg-slate-50 text-slate-400 uppercase text-[9px] tracking-wide font-semibold">
+          <tr>
+            <th class="ble-table t-sticky bg-slate-50 px-3 py-2" style="min-width:52px">Time s</th>
+            <th class="px-3 py-2">B1 RSSI</th><th class="px-3 py-2">Dist</th>
+            <th class="px-3 py-2 beacon-div">B2 RSSI</th><th class="px-3 py-2">Dist</th>
+            <th class="px-3 py-2 beacon-div">B3 RSSI</th><th class="px-3 py-2">Dist</th>
+            <th class="px-3 py-2 beacon-div">B4 RSSI</th><th class="px-3 py-2">Dist</th>
+            <th class="px-3 py-2 beacon-div">B5 RSSI</th><th class="px-3 py-2">Dist</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">${rows}</tbody>
+      </table>`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Process WAV — actions
+    // ═══════════════════════════════════════════════════════════════════════════
+    function toggleBLE(idx) {
+      const f = procFiles[idx];
+      f.expanded = !f.expanded;
+      const acc  = document.getElementById('ble-acc-' + idx);
+      const chev = document.getElementById('chev-' + idx);
+      if (acc)  acc.classList.toggle('open', f.expanded);
+      if (chev) chev.classList.toggle('open', f.expanded);
+    }
+
+    function procDlOne(idx, channel) {
+      const f = procFiles[idx];
+      const base = f.filename.replace(/\.wav$/i,'');
+      if (channel === 'table')  triggerDownload(f.tableBlob,  base + '_table_mic.wav');
+      if (channel === 'waiter') triggerDownload(f.waiterBlob, base + '_waiter_mic.wav');
+    }
+
+    async function procDlZip(idx) {
+      const f = procFiles[idx];
+      const base = f.filename.replace(/\.wav$/i,'');
+      const zip = new JSZip();
+      if (f.tableBlob)  zip.file(base + '_table_mic.wav',  f.tableBlob);
+      if (f.waiterBlob) zip.file(base + '_waiter_mic.wav', f.waiterBlob);
+      if (f.snapshots?.length) {
+        const rows = buildBLECSVRows([f]);
+        zip.file(base + '_ble.csv', rows.join('\n'));
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerDownload(blob, base + '.zip');
+    }
+
+    async function procDownloadAll() {
+      const ready = procFiles.filter(f => f.status === 'ready');
+      if (!ready.length) return;
+      const zip = new JSZip();
+      ready.forEach(f => {
+        const base = f.filename.replace(/\.wav$/i,'');
+        if (f.tableBlob)  zip.file(base + '_table_mic.wav',  f.tableBlob);
+        if (f.waiterBlob) zip.file(base + '_waiter_mic.wav', f.waiterBlob);
+      });
+      const bleFiles = ready.filter(f => f.snapshots?.length);
+      if (bleFiles.length) {
+        const rows = buildBLECSVRows(bleFiles);
+        zip.file('ble_export_' + new Date().toISOString().slice(0,10) + '.csv', rows.join('\n'));
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerDownload(blob, 'smart_mic_export_' + new Date().toISOString().slice(0,10) + '.zip');
+    }
+
+    function exportFileBLE(idx) {
+      const f = procFiles[idx];
+      if (!f.snapshots?.length) return;
+      const rows = buildBLECSVRows([f]);
+      const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+      triggerDownload(blob, f.filename.replace(/\.wav$/i,'') + '_ble.csv');
+    }
+
+    function exportAllBLE() {
+      const files = procFiles.filter(f => f.snapshots?.length);
+      if (!files.length) return;
+      const rows = buildBLECSVRows(files);
+      const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+      triggerDownload(blob, 'ble_export_' + new Date().toISOString().slice(0,10) + '.csv');
+    }
+
+    function buildBLECSVRows(files) {
+      const rows = ['filename,datetime,mic_id,waiter_name,waiter_code,time_s,b1_rssi,b1_dist_m,b2_rssi,b2_dist_m,b3_rssi,b3_dist_m,b4_rssi,b4_dist_m,b5_rssi,b5_dist_m'];
+      files.forEach(f => {
+        const m = f.meta;
+        const fn = csvVal(f.filename), dt = csvVal(m?.datetime||''), mic = csvVal(m?.micId||''),
+              wn = csvVal(m?.waiterName||''), wc = csvVal(m?.waiterCode||'');
+        f.snapshots.forEach(snap => {
+          const t = (snap.offset_ms/1000).toFixed(3);
+          const cols = snap.beacons.map(b => b.active ? `${b.rssi},${b.distance.toFixed(3)}` : ',');
+          rows.push([fn,dt,mic,wn,wc,t,...cols].join(','));
+        });
+      });
+      return rows;
+    }
+
+    function procClearAll() {
+      procFiles = [];
+      document.getElementById('proc-wav-input').value = '';
+      document.getElementById('proc-results').classList.add('hidden');
+      document.getElementById('proc-empty').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
