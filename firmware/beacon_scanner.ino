@@ -1663,6 +1663,33 @@ static const char* loadConfig() {
   }
 
   if (fromSD) {
+    // Compare SD values against what's currently in NVS to detect real changes
+    prefs.begin("cfg", true);
+    char nvsSsid[64] = "", nvsHost[64] = "", nvsBucket[32] = "", nvsAccess[32] = "", nvsSecret[32] = "", nvsMicId[16] = "";
+    char nvsPass[64] = "";
+    prefs.getString("wifi_ssid",  nvsSsid,    sizeof(nvsSsid));
+    prefs.getString("wifi_pass",  nvsPass,    sizeof(nvsPass));
+    prefs.getString("minio_host", nvsHost,    sizeof(nvsHost));
+    prefs.getString("minio_bucket", nvsBucket, sizeof(nvsBucket));
+    prefs.getString("minio_access", nvsAccess, sizeof(nvsAccess));
+    prefs.getString("minio_secret", nvsSecret, sizeof(nvsSecret));
+    prefs.getString("mic_id",     nvsMicId,   sizeof(nvsMicId));
+    int   nvsPort = prefs.getInt  ("minio_port",  MINIO_PORT);
+    int   nvsSR   = prefs.getInt  ("sample_rate", SAMPLE_RATE);
+    float nvsGL   = prefs.getFloat("mic_gain_tbl", MIC_GAIN_L);
+    float nvsGR   = prefs.getFloat("mic_gain_wtr", MIC_GAIN_R);
+    prefs.end();
+
+    bool changed = strcmp(nvsSsid,   WIFI_SSID)    != 0 ||
+                   strcmp(nvsPass,   WIFI_PASSWORD) != 0 ||
+                   strcmp(nvsHost,   MINIO_HOST)    != 0 ||
+                   strcmp(nvsBucket, MINIO_BUCKET)  != 0 ||
+                   strcmp(nvsAccess, MINIO_ACCESS)  != 0 ||
+                   strcmp(nvsSecret, MINIO_SECRET)  != 0 ||
+                   strcmp(nvsMicId,  MIC_ID)         != 0 ||
+                   nvsPort != MINIO_PORT || nvsSR != SAMPLE_RATE ||
+                   nvsGL != MIC_GAIN_L  || nvsGR != MIC_GAIN_R;
+
     prefs.begin("cfg", false);
     prefs.putString("wifi_ssid",    WIFI_SSID);
     prefs.putString("wifi_pass",    WIFI_PASSWORD);
@@ -1676,8 +1703,8 @@ static const char* loadConfig() {
     prefs.putFloat ("mic_gain_wtr",  MIC_GAIN_R);
     prefs.putString("mic_id",        MIC_ID);
     prefs.end();
-    Serial.println("[cfg] Saved to NVS");
-    return "SD";
+    Serial.printf("[cfg] Saved to NVS (changed=%d)\n", changed);
+    return changed ? "SD_CHANGED" : "SD";
   } else {
     prefs.begin("cfg", true);
     if (prefs.isKey("wifi_ssid")) {
@@ -1753,6 +1780,7 @@ void setup() {
   oled.setCursor(0, 9);  oled.print("Michelin");
   oled.setCursor(0, 17); oled.print("PoC v0.2");
   oled.display();
+  delay(1500);
 
   // CPU temperature sensor
   { temperature_sensor_config_t tcfg = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 80);
@@ -1780,7 +1808,7 @@ void setup() {
   if (waiterName[0])
     Serial.printf("[cfg] Waiter: %s | %s\n", waiterName, waiterCode);
 
-  if (strcmp(cfgSrc, "SD") == 0) {
+  if (strcmp(cfgSrc, "SD_CHANGED") == 0) {
     oled.clearDisplay();
     oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
     oled.setCursor(0, 9); oled.print("Config updated");
