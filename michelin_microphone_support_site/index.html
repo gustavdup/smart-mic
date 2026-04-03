@@ -94,7 +94,7 @@
         Hold the printed code in front of the camera on screen 1.
       </p>
 
-      <div class="grid grid-cols-2 gap-4 mb-6 max-w-sm">
+      <div class="grid grid-cols-2 gap-4 max-w-sm" style="margin-bottom:0.75rem">
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Waiter Name</label>
           <input id="qr-name" type="text" placeholder="e.g. Alice"
@@ -107,6 +107,15 @@
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             oninput="updateQR()" />
         </div>
+      </div>
+      <div class="max-w-sm mb-6">
+        <button onclick="randomiseWaiter()"
+          class="w-full flex items-center justify-center gap-2 border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-xs font-medium px-3 py-2 rounded-lg transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+          </svg>
+          Randomise
+        </button>
       </div>
 
       <div id="qr-preview-row" class="hidden mb-2">
@@ -351,6 +360,28 @@
     // ═══════════════════════════════════════════════════════════════════════════
     // QR Code
     // ═══════════════════════════════════════════════════════════════════════════
+    const WAITER_NAMES = [
+      'Alice','Amber','Amy','Anna','Bella','Beth','Chloe','Clara','Dana','Diana',
+      'Elena','Ella','Emma','Eva','Fiona','Grace','Hannah','Holly','Iris','Jade',
+      'Jana','Julia','Kate','Laura','Lea','Lena','Lily','Lisa','Lola','Luna',
+      'Maya','Mia','Mila','Mira','Nadia','Nina','Nora','Olivia','Petra','Pia',
+      'Rosa','Ruby','Sara','Sofia','Stella','Tara','Uma','Vera','Zara','Zoe',
+      'Adam','Alex','Ben','Carlo','Chris','Dan','David','Dylan','Emil','Eric',
+      'Finn','Frank','Gary','Hans','Hugo','Ivan','Jack','Jake','James','Jan',
+      'Joel','John','Jonas','Jules','Karl','Luca','Luke','Marc','Mark','Matt',
+      'Max','Mike','Nick','Noah','Omar','Paul','Pete','Remi','Rick','Rob',
+      'Ryan','Sam','Sean','Stefan','Thomas','Tim','Tom','Victor','Will','Yann'
+    ];
+
+    function randomiseWaiter() {
+      const name = WAITER_NAMES[Math.floor(Math.random() * WAITER_NAMES.length)];
+      const num  = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+      const code = 'W' + num;
+      document.getElementById('qr-name').value = name;
+      document.getElementById('qr-code').value = code;
+      updateQR();
+    }
+
     let qrInstance = null;
 
     function updateQR() {
