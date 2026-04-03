@@ -190,10 +190,21 @@
           <div class="flex gap-4">
             <div class="flex flex-col items-center">
               <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">5</div>
+              <div class="w-px flex-1 bg-slate-200 my-1"></div>
             </div>
-            <div class="pb-2">
+            <div class="pb-6">
               <p class="text-sm font-medium text-slate-700 mb-1">Uploaded over WiFi to MinIO — ready for analysis</p>
               <p class="text-xs text-slate-500 leading-relaxed">A background task turns WiFi on, streams the buffer directly to a <a href="#minio" class="text-blue-600 underline">local MinIO server</a>, then turns WiFi off again. BLE scanning and audio recording continue uninterrupted on the other processor core. Each uploaded file is a standard WAV named with the mic ID, timestamp, and waiter identity — ready to open in any audio tool or process via the <a href="tools.html" class="text-blue-600 underline">Process WAV</a> tab.</p>
+            </div>
+          </div>
+
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">6</div>
+            </div>
+            <div class="pb-2">
+              <p class="text-sm font-medium text-slate-700 mb-1">Isazi data science team processes the files</p>
+              <p class="text-xs text-slate-500 leading-relaxed">Once the recordings are in MinIO, the Isazi data science team takes over — transcribing audio, analysing waiter proximity and table interaction patterns, and extracting insights from the BLE location data embedded in each file.</p>
             </div>
           </div>
 
