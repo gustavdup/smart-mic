@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Smart Mic Tools</title>
+  <title>Michelin Mic Tools</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -54,37 +54,37 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-  <div class="max-w-screen-xl mx-auto px-6 py-10">
-
-    <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-2xl font-semibold text-slate-900">Smart Mic Tools</h1>
-      <p class="text-sm text-slate-400 mt-1">Project Michelin — Prototype</p>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex border-b border-slate-200 mb-8">
+  <!-- Sticky tab nav — matches readme.html -->
+  <div class="border-b border-slate-200 bg-white sticky top-0 z-30">
+    <div class="max-w-screen-xl mx-auto px-6 flex items-end gap-1 h-12">
+      <span class="text-xs font-semibold text-slate-400 uppercase tracking-widest mr-3 pb-3 font-data">Michelin Mic</span>
       <a href="readme.html" id="tab-guide"
-        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 -mb-px cursor-pointer flex items-center gap-1.5">
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 -mb-px transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
         Device Guide
       </a>
       <button onclick="showTab('qr')" id="tab-qr"
-        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px cursor-pointer">
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px bg-white whitespace-nowrap cursor-pointer">
         QR Code Generator
       </button>
       <button onclick="showTab('process')" id="tab-process"
-        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 -mb-px cursor-pointer">
+        class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 -mb-px transition whitespace-nowrap cursor-pointer">
         Process WAV Files
       </button>
     </div>
+  </div>
+
+  <div class="max-w-screen-xl mx-auto px-6 py-10">
 
     <!-- ── QR Code Tab ──────────────────────────────────────────────────────── -->
     <div id="panel-qr">
-      <p class="text-sm text-slate-500 mb-6">
-        Generate a QR code to assign a waiter identity to a Smart Mic device.
-        Hold the printed code in front of the camera on screen 1.
-      </p>
+      <div class="mb-8">
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Project Michelin — Proof of Concept</p>
+        <h1 class="text-3xl font-semibold text-slate-900 mb-3">QR Code Generator</h1>
+        <p class="text-base text-slate-500 leading-relaxed max-w-2xl">
+          Generate a QR code to assign a waiter identity to a Michelin Mic device. Hold the printed code in front of the camera on screen 1.
+        </p>
+      </div>
 
       <div class="grid grid-cols-2 gap-4 max-w-sm" style="margin-bottom:0.75rem">
         <div>
@@ -133,6 +133,14 @@
 
     <!-- ── Process WAV Tab ─────────────────────────────────────────────────── -->
     <div id="panel-process" class="hidden">
+
+      <div class="mb-8">
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Project Michelin — Proof of Concept</p>
+        <h1 class="text-3xl font-semibold text-slate-900 mb-3">Process WAV Files</h1>
+        <p class="text-base text-slate-500 leading-relaxed max-w-2xl">
+          Split stereo recordings into separate table mic and waiter mic channels, and extract BLE beacon location data — all in a single pass.
+        </p>
+      </div>
 
       <!-- Channel legend -->
       <div class="flex flex-wrap gap-3 mb-5">
@@ -188,7 +196,7 @@
         <svg class="w-10 h-10 text-slate-200 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"/>
         </svg>
-        <p class="text-sm text-slate-400">Drop Smart Mic WAV files above to split channels and extract BLE data.</p>
+        <p class="text-sm text-slate-400">Drop Michelin Mic WAV files above to split channels and extract BLE data.</p>
       </div>
     </div>
 
@@ -202,10 +210,12 @@
       ['qr', 'process'].forEach(t => {
         document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
         const btn = document.getElementById('tab-' + t);
-        btn.classList.toggle('border-blue-600', t === name);
-        btn.classList.toggle('text-blue-600',   t === name);
-        btn.classList.toggle('border-transparent', t !== name);
-        btn.classList.toggle('text-slate-500',  t !== name);
+        const active = t === name;
+        btn.classList.toggle('border-blue-600',    active);
+        btn.classList.toggle('text-blue-600',      active);
+        btn.classList.toggle('bg-white',           active);
+        btn.classList.toggle('border-transparent', !active);
+        btn.classList.toggle('text-slate-500',     !active);
       });
     }
 
