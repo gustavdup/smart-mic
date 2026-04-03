@@ -897,19 +897,21 @@ void uploadTask(void* arg) {
         }
         root.close();
         portENTER_CRITICAL_SAFE(&_pend_mux); pendingSD = count; portEXIT_CRITICAL_SAFE(&_pend_mux);
+        if (count > 0 && !isRecording) {
+          oled.clearDisplay();
+          oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
+          oled.setCursor(0, 1); oled.print("SD upload:");
+          char cnt[11]; snprintf(cnt, sizeof(cnt), "%d file%s", count, count == 1 ? "" : "s");
+          oled.setCursor(0, 9); oled.print(cnt);
+          oled.display();
+        }
       }
       xSemaphoreGive(sdMutex);
     }
 
     // ── Scan SD for leftover files (from previous sessions or failed uploads) ──
-    // Skip if recording is active — avoid SD SPI contention and picking up live file
-    if (isRecording) {
-      Serial.println("[upload] Recording active — skipping SD scan");
-      WiFi.disconnect(false); WiFi.mode(WIFI_OFF); addLog("WiFi off");
-      vTaskDelay(pdMS_TO_TICKS(5000));
-      xSemaphoreGive(uploadReady);
-      continue;
-    }
+    // skipFile prevents picking up the currently-recording file (already handled below).
+    // SD uploads run between PSRAM segments — no isRecording guard needed.
     while (true) {
       char nextFile[48] = "";
 
@@ -1791,7 +1793,8 @@ void setup() {
   oled.setTextSize(1);
   oled.setCursor(0, 1);  oled.print("Project");
   oled.setCursor(0, 9);  oled.print("Michelin");
-  oled.setCursor(0, 17); oled.print("PoC v0.2");
+  oled.setCursor(0, 17); oled.print("Prototype");
+  oled.setCursor(0, 25); oled.print("Ver: 0.3");
   oled.display();
   delay(1500);
 
@@ -1906,6 +1909,12 @@ void setup() {
   s_idle0 = 0; s_idle1 = 0;
   portENABLE_INTERRUPTS();
   Serial.printf("[cpu] baseline C0=%u C1=%u\n", s_base0, s_base1);
+
+  // Trigger startup SD scan — upload any leftover files from previous sessions
+  xSemaphoreGive(uploadReady);
+
+  // Trigger startup SD scan — upload any leftover files from previous sessions
+  xSemaphoreGive(uploadReady);
 
   Serial.println("Ready. Press button to record.");
 }
