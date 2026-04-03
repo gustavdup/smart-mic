@@ -1783,14 +1783,16 @@ void setup() {
   if (strcmp(cfgSrc, "SD") == 0) {
     oled.clearDisplay();
     oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
-    oled.setCursor(0, 3); oled.print("Config: SD loaded");
-    oled.setCursor(0, 15); oled.print(WIFI_SSID);
-    oled.setCursor(0, 27); oled.print(MINIO_HOST);
+    oled.setCursor(0, 9); oled.print("Config updated");
     oled.display();
-    delay(2000);
+    delay(1500);
   }
 
   // WiFi — connect once for NTP, then radio off until upload needed
+  oled.clearDisplay();
+  oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
+  oled.setCursor(0, 9); oled.print("WiFi...");
+  oled.display();
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   int att = 0;
   while (WiFi.status() != WL_CONNECTED && att < 20) { delay(500); att++; }
@@ -1809,10 +1811,10 @@ void setup() {
   oled.clearDisplay();
   oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
   if (WiFi.status() == WL_CONNECTED) {
-    oled.setCursor(0, 3); oled.print("WiFi OK");
-    oled.setCursor(0, 13); oled.print(WiFi.localIP().toString().c_str());
+    oled.setCursor(0, 1); oled.print("WiFi OK");
+    oled.setCursor(0, 9); oled.print(WiFi.localIP().toString().c_str());
   } else {
-    oled.setCursor(0, 3); oled.print("WiFi failed");
+    oled.setCursor(0, 9); oled.print("WiFi failed");
   }
   oled.display();
   delay(1000);
