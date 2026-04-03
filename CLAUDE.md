@@ -83,7 +83,7 @@ Raw 32-bit DMA (ICS-43434, 24-bit MSB-aligned)
   → Gain + soft limiter → int16_t output
 ```
 
-Gains: `MIC_GAIN_L=4` (table-facing), `MIC_GAIN_R=4` (waiter-facing — same gain, adjust R upward if waiter channel is quieter).
+Gains: `MIC_GAIN_L` (table-facing) and `MIC_GAIN_R` (waiter-facing) — both default 4.0, configurable via `mic_gain_table=` and `mic_gain_waiter=` in config.txt.
 
 ## Critical Bug Fixes Applied
 
@@ -110,6 +110,26 @@ Built-in PDM mic replaced with external Adafruit ICS-43434 stereo pair. Uses `dr
 Motor pulses existed in both the button handler (blocking `delay()`) and `recordingTask` (`vTaskDelay()`). Overlapping current draw crashed the OLED power rail.
 
 **Fix:** Motor pulses only in `recordingTask`. Button handler sets `isRecording = true` then returns immediately.
+
+### OLED corruption / motor not firing on recording start (race condition)
+`recordingTask` polls `isRecording` every 100ms. Up to 100ms gap between `isRecording = true` (button handler) and `g_motorActive = true` (recordingTask) — `updateDisplay()` could touch I2C while `initMic()` reconfigures GPIO matrix, corrupting the bus.
+
+**Fix:** Set `g_motorActive = true` atomically with `isRecording = true` in the button handler. `recordingTask` clears it after the motor sequence as before.
+
+### OLED corruption during QR scan
+`esp_camera_init()` reconfigures camera GPIOs, corrupting I2C. The scan loop immediately calls `oled.display()` after init.
+
+**Fix:** Wire.end()/Wire.begin()/oled.begin()/setRotation(2) immediately after `esp_camera_init()` succeeds, before any OLED calls.
+
+### psramFill not zeroed on SD fallback
+When PSRAM upload fails and segment is written to SD, `psramFill[i]` was not cleared. Display showed buffer as `rdy 1.0M` with `SD:0` even though data had moved to SD.
+
+**Fix:** Zero `psramFill[i]` in all three SD fallback paths: upload fail, uploads disabled, and WiFi fail.
+
+### uploadTask sleeping forever when MinIO down but WiFi up
+The 60s auto-retry only existed in the WiFi-fail path. If WiFi connected but MinIO was unreachable, task fell back to SD then slept until the next recording segment.
+
+**Fix:** After WiFi goes off, if `pendingSD > 0`, re-signal `uploadReady` after backoff delay.
 
 ### GPIO14 (PDM_PWR / CAM_PIN_Y6)
 Must be set LOW before `esp_camera_init()` in `scanQRCode()` and restored HIGH after `esp_camera_deinit()`.
@@ -180,6 +200,12 @@ Calling `tcp.setNoDelay(true)` before `tcp.connect()` has no effect.
 
 **Core 0 at 99% during upload is expected** — WiFi/BLE drivers are higher priority and still preempt uploadTask.
 
+## Boot Screen Sequence
+1. **Project / Michelin / PoC v0.2** — always shown for 1.5s
+2. **Config updated** — only if SD config differs from NVS (`SD_CHANGED`)
+3. **WiFi...** — while connecting
+4. **WiFi OK** + IP address, or **WiFi failed**
+
 ## OLED Screens (9 screens, 64×32, cycle with single click)
 
 All screens rendered on the 64×32 Adafruit SSD1306 (`oled.setRotation(2)` for 180° enclosure mount). 10 chars wide, 4 lines at y=1/9/17/25.
@@ -215,7 +241,8 @@ Split into two atomic counters, protected by `portENTER_CRITICAL_SAFE(&_pend_mux
 
 ## WiFi Lifecycle
 - **Startup:** Connect → NTP sync → `WiFi.mode(WIFI_OFF)` (after BLE init)
-- **Upload:** `WiFi.mode(WIFI_STA)` → connect → 500ms settle → upload queue drain → `WiFi.mode(WIFI_OFF)`
+- **Upload:** `WiFi.mode(WIFI_STA)` → connect → 500ms settle → upload queue drain → SD scan → `WiFi.mode(WIFI_OFF)`
+- **Retry backoff:** If `pendingSD > 0` after WiFi goes off (MinIO unreachable or WiFi fail): retry after 5s (first attempt), then 30s for subsequent attempts. Counter resets when all files upload successfully.
 - **Speedtest:** Same as upload, triggered manually from screen 7 (hold 3s). Button press cancels.
 
 ## SD Card Config File
@@ -230,9 +257,12 @@ minio_bucket=audio
 minio_access=minioadmin
 minio_secret=minioadmin
 sample_rate=16000
+mic_gain_table=4.0
+mic_gain_waiter=4.0
+mic_id=mic1
 ```
 
-Lines starting with `#` ignored. Unknown keys silently skipped. `loadConfig()` returns `"SD"`, `"NVS"`, or `"default"`.
+Lines starting with `#` ignored. Unknown keys silently skipped. `loadConfig()` returns `"SD_CHANGED"` (SD loaded and differs from NVS), `"SD"` (SD loaded but matches NVS), `"NVS"`, or `"default"`. The "Config updated" OLED message only shows on `"SD_CHANGED"`.
 
 ## iBeacon Packet Layout (manufacturer data, 25 bytes)
 ```
@@ -305,7 +335,7 @@ Both must stay in sync. After every edit: `cp "firmware/beacon_scanner.ino" ~/Do
 **Status: Working.** Screen 1 (waiter screen), hold 3s → `scanQRCode()`.
 
 QR format: `name|code` (e.g. `Alice|W01`). Saved to NVS namespace `"cfg"`, restored on boot.
-WAV filename: `rec_YYYYMMDD_HHMMSS_CODE_NAME.wav`.
+WAV filename: `{mic_id}_rec_YYYYMMDD_HHMMSS_CODE_NAME.wav` (e.g. `mic1_rec_20260403_120000_W01_Alice.wav`).
 Placeholder waiter `John|d03` via 6s hold on screen 1.
 Recording cannot start without a waiter — error shown, redirects to screen 1.
 
