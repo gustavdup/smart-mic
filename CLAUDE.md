@@ -57,15 +57,15 @@ ESP32-S3 iBeacon scanner with stereo audio recording, OLED display, and MinIO up
 - `QR_CODE_SCANNER.md` — QR scanning implementation notes
 - `Kalman.md` — plan for Kalman-filtered BLE distance smoothing (not yet implemented)
 
-## Architecture: PSRAM Double-Buffer Recording
+## Architecture: PSRAM Quad-Buffer Recording
 
-Audio is recorded directly into PSRAM — no SD writes during recording. Two **2 MB** PSRAM buffers (`psramBuf[0/1]`). At 16kHz stereo 16-bit, each buffer holds ~30s per segment (~1.83 MB per segment). `recordingTask` writes into the active buffer; at each 30s segment boundary it patches the WAV header + BLE chunk in-buffer, queues the buffer via `segmentQueue`, and flips to the other. `uploadTask` streams the queued buffer directly to MinIO via `uploadFromPSRAM()`. SD is only written as a fallback when WiFi is down or upload fails.
+Audio is recorded directly into PSRAM — no SD writes during recording. Four **1.95 MB** PSRAM buffers (`psramBuf[0..3]`, 7.8MB total). At 16kHz stereo 16-bit, each buffer holds ~30s per segment. `recordingTask` writes into the active buffer; at each segment boundary it patches the WAV header + BLE chunk in-buffer, queues the buffer via `segmentQueue`, and advances `activeBuf` round-robin (0→1→2→3→0). `uploadTask` streams queued buffers directly to MinIO. Up to 3 segments can queue while 1 records. SD is only written as a fallback when WiFi is down or upload fails.
 
-- `activeBuf` — index (0 or 1) of the buffer currently being recorded into
+- `activeBuf` — index (0–3) of the buffer currently being recorded into
 - `psramFill[i]` — audio bytes written into buffer i (not counting WAV header)
 - `uploadingBuf` — index of the buffer currently being uploaded (-1 = none); used by display
 - `uploadKBps` — live upload speed (KB/s), updated per chunk during streaming
-- `segmentQueue` — FreeRTOS queue (depth 2) of `SegmentReady` structs passed from recordingTask → uploadTask
+- `segmentQueue` — FreeRTOS queue (depth 3) of `SegmentReady` structs passed from recordingTask → uploadTask
 
 **Segment size at 16kHz stereo 16-bit 30s:** ~1.83 MB audio + 44B WAV header + ~1KB BLE chunk = ~1.85 MB per file.
 
@@ -79,11 +79,11 @@ See `AUDIO_PIPELINE.md` for full documentation. Summary:
 Raw 32-bit DMA (ICS-43434, 24-bit MSB-aligned)
   → Extract: (int32_t)(rawBuf >> 8) / 256.0f  → normalised 16-bit float
   → DC blocker (~10Hz, alpha=0.9992) — both channels
-  → 3-pole high-pass (~80Hz, alpha=0.9972 cascaded) — both channels
+  → 3-pole high-pass (cutoff configurable, default 80Hz) — both channels
   → Gain + soft limiter → int16_t output
 ```
 
-Gains: `MIC_GAIN_L` (table-facing) and `MIC_GAIN_R` (waiter-facing) — both default 4.0, configurable via `mic_gain_table=` and `mic_gain_waiter=` in config.txt.
+Gains: `MIC_GAIN_L` (table-facing) and `MIC_GAIN_R` (waiter-facing) — both default 4.0, configurable via `mic_gain_table=` and `mic_gain_waiter=` in config.txt. HP cutoff configurable via `hp_cutoff_hz=` (default 80, computed to alpha at recording start).
 
 ## Critical Bug Fixes Applied
 
@@ -204,7 +204,7 @@ Calling `tcp.setNoDelay(true)` before `tcp.connect()` has no effect.
 **Core 0 at 99% during upload is expected** — WiFi/BLE drivers are higher priority and still preempt uploadTask.
 
 ## Boot Screen Sequence
-1. **Project / Michelin / PoC v0.2** — always shown for 1.5s
+1. **Project / Michelin / Prototype / Ver: 0.3** — always shown for 1.5s
 2. **Config updated** — only if SD config differs from NVS (`SD_CHANGED`)
 3. **WiFi...** — while connecting
 4. **WiFi OK** + IP address, or **WiFi failed**
@@ -217,7 +217,7 @@ All screens rendered on the 64×32 Adafruit SSD1306 (`oled.setRotation(2)` for 1
 
 **Screen 1 (waiter):** Waiter code, name, `3s:scan QR`, `6s:demo`. Hold 3s → scan QR. Hold 6s → load placeholder `John|d03`. Rec blink dot (r=2) top-right when recording.
 
-**Screen 2 (PSRAM):** B0/B1 PSRAM state (REC/UPL/rdy/idl/fre) + fill in KB or MB (e.g. `1.8M`), UL speed or `UL:idle`, SD pend count. Hold 3s → start/stop recording.
+**Screen 2 (PSRAM):** All 4 buffers, one per line — `B0:REC 1.8M`, `B1:UPL 1.8M`, `B2:rdy 1.8M`, `B3:fre`. States: REC/UPL/rdy/idl/fre. Hold 3s → start/stop recording.
 
 **Screen 3:** BLE beacons 1–3 — format `1-70 3.2m` (no T prefix, space between dB and metres). Stale shown as `1 stale`, inactive as `1 --`.
 
@@ -264,6 +264,8 @@ sample_rate=16000
 mic_gain_table=4.0
 mic_gain_waiter=4.0
 mic_id=mic1
+hp_cutoff_hz=80
+segment_duration=30
 ```
 
 Lines starting with `#` ignored. Unknown keys silently skipped. `loadConfig()` returns `"SD_CHANGED"` (SD loaded and differs from NVS), `"SD"` (SD loaded but matches NVS), `"NVS"`, or `"default"`. The "Config updated" OLED message only shows on `"SD_CHANGED"`.
@@ -342,6 +344,7 @@ QR format: `name|code` (e.g. `Alice|W01`). Saved to NVS namespace `"cfg"`, resto
 WAV filename: `{mic_id}_rec_YYYYMMDD_HHMMSS_CODE_NAME.wav` (e.g. `mic1_rec_20260403_120000_W01_Alice.wav`).
 Placeholder waiter `John|d03` via 6s hold on screen 1.
 Recording cannot start without a waiter — error shown, redirects to screen 1.
+**QR scan blocked while recording** — shows "Stop rec / first." for 2s.
 
 ### What makes QR work
 - `PIXFORMAT_GRAYSCALE` + `FRAMESIZE_QVGA` (320×240) — quirc needs raw pixels
