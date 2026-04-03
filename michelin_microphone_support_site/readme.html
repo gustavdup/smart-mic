@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Mic — Device Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Fira Sans', system-ui, sans-serif; }
+    .font-data { font-family: 'Fira Code', 'Courier New', monospace; }
+
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; }
+
+    /* Sidebar nav active state */
+    .nav-link { transition: color 120ms ease, background 120ms ease; }
+    .nav-link.active { color: #2563EB; background: #EFF6FF; }
+
+    /* Section headings — anchor offset */
+    section[id] { scroll-margin-top: 2rem; }
+
+    /* OLED screen mockup */
+    .oled-screen {
+      background: #0a0a0a;
+      border: 2px solid #1e293b;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #d4f5a0;
+      min-width: 108px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 0 0 1px #334155, inset 0 0 12px rgba(0,0,0,0.6);
+    }
+    .oled-screen .dim { color: #4a6630; }
+    .oled-screen .dot { color: #86efac; animation: blink 1.2s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* Code blocks */
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 10px; overflow-x: auto; }
+    pre code { font-family: 'Fira Code', monospace; font-size: 12.5px; line-height: 1.7; }
+    .comment { color: #64748b; }
+    .key     { color: #7dd3fc; }
+    .val     { color: #86efac; }
+
+    /* Table styles */
+    .doc-table th { background: #f1f5f9; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+    .doc-table td { font-size: 13px; vertical-align: top; }
+    .doc-table tr:hover td { background: #f8fafc; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* Sidebar */
+    @media (min-width: 1024px) {
+      .sidebar { position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+  <!-- Top nav bar -->
+  <div class="border-b border-slate-200 bg-white sticky top-0 z-30">
+    <div class="max-w-screen-xl mx-auto px-6 h-12 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="text-sm text-slate-500 hover:text-slate-700 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+          Tools
+        </a>
+        <span class="text-slate-300">/</span>
+        <span class="text-sm font-medium text-slate-700">Device Guide</span>
+      </div>
+      <span class="text-xs text-slate-400 font-data">Smart Mic · Ver 0.3</span>
+    </div>
+  </div>
+
+  <div class="max-w-screen-xl mx-auto px-6 py-10 flex gap-12">
+
+    <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+    <aside class="sidebar hidden lg:block w-52 flex-shrink-0">
+      <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-3 px-3">Contents</p>
+      <nav class="space-y-0.5 text-sm" id="sidebar-nav">
+        <a href="#overview"       class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Overview</a>
+        <a href="#microphones"    class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Microphones</a>
+        <a href="#config"         class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Config File</a>
+        <a href="#boot"           class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Boot Sequence</a>
+        <a href="#screens"        class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">OLED Screens</a>
+        <a href="#buttons"        class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Button Reference</a>
+        <a href="#waiter"         class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Waiter Assignment</a>
+        <a href="#recording"      class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Recording & Upload</a>
+        <a href="#files"          class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">File Format</a>
+      </nav>
+    </aside>
+
+    <!-- ── Main content ───────────────────────────────────────────────────── -->
+    <main class="flex-1 min-w-0 space-y-16">
+
+      <!-- Header -->
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-2">Project Michelin — Prototype</p>
+        <h1 class="text-3xl font-semibold text-slate-900 mb-3">Smart Mic Device Guide</h1>
+        <p class="text-base text-slate-500 leading-relaxed max-w-2xl">
+          The Smart Mic is a compact wearable recorder built on the XIAO ESP32-S3 Sense. It captures stereo audio from two microphones — one facing the table, one facing the waiter — continuously uploads 30-second segments to a local MinIO server, and logs Bluetooth beacon distances for every segment.
+        </p>
+      </div>
+
+      <!-- ── Overview ─────────────────────────────────────────────────────── -->
+      <section id="overview">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Overview</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Hardware</p>
+            <p class="text-sm font-medium text-slate-700 mb-1">XIAO ESP32-S3 Sense</p>
+            <p class="text-xs text-slate-500 leading-relaxed">Seeed Expansion Board v1 · OV2640 camera · dual ICS-43434 MEMS microphones · SSD1306 OLED · vibration motor</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Audio</p>
+            <p class="text-sm font-medium text-slate-700 mb-1">Stereo · 16 kHz · 16-bit PCM</p>
+            <p class="text-xs text-slate-500 leading-relaxed">30-second segments · stored in 4 × 1.95 MB PSRAM buffers · streamed directly to MinIO over WiFi</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">BLE Positioning</p>
+            <p class="text-sm font-medium text-slate-700 mb-1">iBeacon · 5 beacons</p>
+            <p class="text-xs text-slate-500 leading-relaxed">UUID E2C56DB5… · majors 1–5 · RSSI + estimated distance logged every second into each WAV file</p>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">How it works</h3>
+        <ol class="space-y-3 text-sm text-slate-600">
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+            <span>A waiter identity (name + code) is assigned to the device by scanning a QR code on the waiter screen. This is saved and survives reboots.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+            <span>Hold the button for 3 seconds on the main screen to start recording. The device vibrates twice to confirm. A blinking dot appears on the display.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+            <span>Every 30 seconds, the current segment is finalised — a WAV header and BLE snapshot log are written in-buffer — then queued for upload. Recording continues immediately into the next buffer.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+            <span>The upload task turns WiFi on, streams the buffer directly to MinIO, then turns WiFi off again. BLE scanning and recording run uninterrupted on the other core.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">5</span>
+            <span>If WiFi or MinIO is unavailable, segments fall back to the SD card. They are uploaded automatically when connectivity returns.</span>
+          </li>
+        </ol>
+      </section>
+
+      <!-- ── Microphones ───────────────────────────────────────────────────── -->
+      <section id="microphones">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Microphones</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+          Two <strong class="font-medium text-slate-700">Adafruit ICS-43434</strong> I²S MEMS microphones share a single data line and record as a stereo pair. The SEL pin on each mic determines which I²S time slot it drives — one mic tri-states while the other transmits.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></span>
+              <p class="text-sm font-semibold text-slate-700">Left Channel — Table Mic</p>
+            </div>
+            <ul class="text-xs text-slate-500 space-y-1">
+              <li><span class="font-data text-slate-600">SEL = GND</span> — drives the left (L) I²S slot</li>
+              <li>Faces the <strong class="text-slate-600">table / customer</strong></li>
+              <li>Captures ambient conversation and customer speech</li>
+              <li>Split to <span class="font-data text-slate-600">_table_mic.wav</span> via the Split WAV tool</li>
+            </ul>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0"></span>
+              <p class="text-sm font-semibold text-slate-700">Right Channel — Waiter Mic</p>
+            </div>
+            <ul class="text-xs text-slate-500 space-y-1">
+              <li><span class="font-data text-slate-600">SEL = 3V3</span> — drives the right (R) I²S slot</li>
+              <li>Faces the <strong class="text-slate-600">waiter's mouth</strong></li>
+              <li>Captures waiter speech directly and clearly</li>
+              <li>Split to <span class="font-data text-slate-600">_waiter_mic.wav</span> via the Split WAV tool</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Audio Processing Pipeline</h3>
+        <div class="bg-slate-900 rounded-xl p-5 text-xs font-data leading-7 text-slate-300 mb-4 overflow-x-auto">
+          <div class="text-slate-500">// Each 32-bit DMA frame — ICS-43434 outputs 24 valid bits MSB-aligned</div>
+          <div class="mt-1">Raw I²S DMA (32-bit frames, interleaved L/R)</div>
+          <div class="text-slate-500 pl-4">↓</div>
+          <div class="pl-4">Extract: <span class="text-sky-400">(int32_t)(rawBuf &gt;&gt; 8) / 256.0f</span>  <span class="text-slate-500">// full 24-bit range → 16-bit float scale</span></div>
+          <div class="text-slate-500 pl-4">↓</div>
+          <div class="pl-4">DC blocker  <span class="text-slate-500">// ~10 Hz — removes slow drift from handling/movement</span></div>
+          <div class="text-slate-500 pl-4">↓</div>
+          <div class="pl-4">High-pass filter  <span class="text-slate-500">// configurable cutoff (default 80 Hz) — removes thuds</span></div>
+          <div class="text-slate-500 pl-4">↓</div>
+          <div class="pl-4">Gain × <span class="text-emerald-400">mic_gain</span>  +  soft limiter  <span class="text-slate-500">// compresses above ±24000, no hard clip</span></div>
+          <div class="text-slate-500 pl-4">↓</div>
+          <div class="pl-4">16-bit PCM stereo output → PSRAM buffer</div>
+        </div>
+        <p class="text-xs text-slate-400">Gain and filter cutoff are configurable via <span class="font-data">config.txt</span>. See the Config File section below.</p>
+      </section>
+
+      <!-- ── Config File ───────────────────────────────────────────────────── -->
+      <section id="config">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Config File</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+          Place <span class="font-data bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">config.txt</span> in the root of the SD card before inserting it. The device reads it at boot, saves values to flash (NVS), and shows <em>"Config updated"</em> on the display if anything changed. On subsequent boots without the file, it falls back to the saved NVS values.
+        </p>
+
+        <pre class="p-5 mb-6"><code><span class="comment"># ── WiFi ───────────────────────────────────────────────</span>
+<span class="key">wifi_ssid</span>=<span class="val">Home DSL</span>          <span class="comment"># your network name</span>
+<span class="key">wifi_pass</span>=<span class="val">yourpassword</span>      <span class="comment"># your network password</span>
+
+<span class="comment"># ── MinIO Upload ───────────────────────────────────────</span>
+<span class="key">minio_host</span>=<span class="val">192.168.1.72</span>     <span class="comment"># IP or hostname, no http:// or trailing slash</span>
+<span class="key">minio_port</span>=<span class="val">9000</span>             <span class="comment"># MinIO default</span>
+<span class="key">minio_bucket</span>=<span class="val">audio</span>          <span class="comment"># bucket must already exist</span>
+<span class="key">minio_access</span>=<span class="val">minioadmin</span>
+<span class="key">minio_secret</span>=<span class="val">minioadmin</span>
+
+<span class="comment"># ── Device Identity ────────────────────────────────────</span>
+<span class="key">mic_id</span>=<span class="val">mic1</span>                 <span class="comment"># prepended to every filename. Use mic2, mic3 etc.</span>
+                             <span class="comment"># max 15 chars, no spaces</span>
+
+<span class="comment"># ── Audio ──────────────────────────────────────────────</span>
+<span class="key">sample_rate</span>=<span class="val">16000</span>           <span class="comment"># Hz. Min: 8000. Max: 16000 (PSRAM limit)</span>
+<span class="key">mic_gain_table</span>=<span class="val">4.0</span>          <span class="comment"># table-facing mic gain. Range: 1.0–8.0</span>
+<span class="key">mic_gain_waiter</span>=<span class="val">4.0</span>         <span class="comment"># waiter-facing mic gain. Range: 1.0–8.0</span>
+<span class="key">hp_cutoff_hz</span>=<span class="val">80</span>             <span class="comment"># high-pass cutoff. Recommended: 80. Range: 40–200</span>
+<span class="key">segment_duration</span>=<span class="val">30</span>         <span class="comment"># seconds per file. Max: ~30s at 16kHz</span></code></pre>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-4">Setting Reference</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-200 mb-4">
+          <table class="doc-table w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 whitespace-nowrap border-b border-slate-200">Key</th>
+                <th class="px-4 py-3 whitespace-nowrap border-b border-slate-200">Default</th>
+                <th class="px-4 py-3 whitespace-nowrap border-b border-slate-200">Range</th>
+                <th class="px-4 py-3 border-b border-slate-200">When to change</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">mic_gain_table</td><td class="px-4 py-3 font-data text-xs">4.0</td><td class="px-4 py-3 font-data text-xs text-slate-400">1.0–8.0</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">Increase if the table channel is too quiet. Decrease if you hear distortion or clipping on loud sounds.</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">mic_gain_waiter</td><td class="px-4 py-3 font-data text-xs">4.0</td><td class="px-4 py-3 font-data text-xs text-slate-400">1.0–8.0</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">Increase if the waiter's voice sounds weak relative to the table channel. Can be set higher than table gain if the waiter mic is further from the mouth.</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">hp_cutoff_hz</td><td class="px-4 py-3 font-data text-xs">80</td><td class="px-4 py-3 font-data text-xs text-slate-400">40–200</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">Increase (e.g. 120–150) if you get heavy thumps from handling or table vibration. Decrease to 60 if male voices sound thin. Male speech starts at ~85 Hz — avoid going above 150.</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">sample_rate</td><td class="px-4 py-3 font-data text-xs">16000</td><td class="px-4 py-3 font-data text-xs text-slate-400">8000–16000</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">16 kHz is standard for speech and the recommended setting. Lower rates produce smaller files but reduce quality. 16 kHz is the maximum — PSRAM limits each buffer to ~30s at this rate.</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">segment_duration</td><td class="px-4 py-3 font-data text-xs">30</td><td class="px-4 py-3 font-data text-xs text-slate-400">10–30</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">How often a new file is created and uploaded. Shorter = more frequent uploads, smaller files, less data at risk if the device crashes. Longer = fewer uploads, more overhead per file.</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">mic_id</td><td class="px-4 py-3 font-data text-xs">mic1</td><td class="px-4 py-3 font-data text-xs text-slate-400">—</td><td class="px-4 py-3 text-slate-600 text-xs leading-relaxed">Change to <span class="font-data">mic2</span>, <span class="font-data">mic3</span> etc. when deploying multiple devices at the same venue. Appears as the first part of every WAV filename.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 flex gap-2">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+          Lines starting with <span class="font-data mx-1">#</span> are comments and are ignored. Unknown keys are silently skipped. The device only shows "Config updated" when a value actually changes from what was previously saved.
+        </div>
+      </section>
+
+      <!-- ── Boot Sequence ─────────────────────────────────────────────────── -->
+      <section id="boot">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Boot Sequence</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <div class="flex flex-wrap gap-3 items-start">
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="oled-screen" style="width:100px">
+              <div>Project</div>
+              <div>Michelin</div>
+              <div>Prototype</div>
+              <div>Ver: 0.3</div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Always · 1.5s</p>
+          </div>
+
+          <div class="text-slate-300 self-center text-lg mt-0">→</div>
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="oled-screen" style="width:100px">
+              <div>Config</div>
+              <div>updated</div>
+              <div class="dim">—</div>
+              <div class="dim">—</div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">If config changed</p>
+          </div>
+
+          <div class="text-slate-300 self-center text-lg mt-0">→</div>
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="oled-screen" style="width:100px">
+              <div>WiFi...</div>
+              <div class="dim">—</div>
+              <div class="dim">—</div>
+              <div class="dim">—</div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">While connecting</p>
+          </div>
+
+          <div class="text-slate-300 self-center text-lg mt-0">→</div>
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="oled-screen" style="width:100px">
+              <div>WiFi OK</div>
+              <div>192.168</div>
+              <div>.1.100</div>
+              <div class="dim">—</div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Connected</p>
+          </div>
+
+          <div class="text-slate-300 self-center text-lg mt-0">→</div>
+
+          <div class="flex flex-col items-center gap-1">
+            <div class="oled-screen" style="width:100px">
+              <div>OFF</div>
+              <div>W:Alice</div>
+              <div>UL: idle</div>
+              <div>3s:rec</div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Main screen</p>
+          </div>
+
+        </div>
+
+        <p class="text-xs text-slate-400 mt-4">After connecting, the device syncs time via NTP, turns WiFi off, and starts BLE scanning. It's ready to record. If no waiter has been assigned yet, it will prompt you to scan a QR code first.</p>
+      </section>
+
+      <!-- ── OLED Screens ──────────────────────────────────────────────────── -->
+      <section id="screens">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">OLED Screens</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-2 rounded-full"></div>
+        <p class="text-sm text-slate-500 mb-6">9 screens total. Single-click cycles forward, double-click goes back.</p>
+
+        <div class="space-y-6">
+
+          <!-- Screen 0 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>REC <span class="dot">●</span></div>
+                <div>W:Alice</div>
+                <div>UL:45KB/s</div>
+                <div>SD:0</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 0</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">Main Screen</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li><strong class="text-slate-600">Line 1:</strong> Recording state (OFF / REC) + blinking dot when active</li>
+                <li><strong class="text-slate-600">Line 2:</strong> Assigned waiter name</li>
+                <li><strong class="text-slate-600">Line 3:</strong> Upload speed (<span class="font-data">UL:45KB/s</span>) or <span class="font-data">UL: idle</span></li>
+                <li><strong class="text-slate-600">Line 4:</strong> Files pending upload from SD card</li>
+                <li><strong class="text-slate-600">Hold 3s:</strong> Start or stop recording</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 1 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>W01</div>
+                <div>Alice</div>
+                <div>3s:scan QR</div>
+                <div>6s:demo</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 1</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">Waiter Screen</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li><strong class="text-slate-600">Lines 1–2:</strong> Currently assigned waiter code and name</li>
+                <li><strong class="text-slate-600">Hold 3s:</strong> Activate camera and scan a QR code to assign a new waiter</li>
+                <li><strong class="text-slate-600">Hold 6s:</strong> Load placeholder waiter (John · d03) for testing — no QR needed</li>
+                <li>A tick mark appears on the progress bar at 3s to help time the QR threshold</li>
+                <li>QR scan is blocked while recording is active</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 2 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>B0:REC 1.8M</div>
+                <div>B1:UPL 1.8M</div>
+                <div>B2:rdy 0.5M</div>
+                <div>B3:fre</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 2</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">PSRAM Buffers</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li>Shows all 4 PSRAM recording buffers and their state</li>
+                <li><span class="font-data text-slate-600">REC</span> — actively recording into this buffer</li>
+                <li><span class="font-data text-slate-600">UPL</span> — currently uploading to MinIO</li>
+                <li><span class="font-data text-slate-600">rdy</span> — full, queued for upload</li>
+                <li><span class="font-data text-slate-600">fre</span> — empty and available</li>
+                <li><span class="font-data text-slate-600">idl</span> — not recording, not yet used</li>
+                <li><strong class="text-slate-600">Hold 3s:</strong> Start or stop recording</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screens 3 & 4 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex gap-3 flex-shrink-0">
+              <div class="flex flex-col items-center gap-1">
+                <div class="oled-screen">
+                  <div>1-70 3.2m</div>
+                  <div>2-65 2.1m</div>
+                  <div>3 stale</div>
+                  <div class="dim">—</div>
+                </div>
+                <p class="text-[10px] text-slate-400">Screen 3</p>
+              </div>
+              <div class="flex flex-col items-center gap-1">
+                <div class="oled-screen">
+                  <div>4-72 3.8m</div>
+                  <div>5 --</div>
+                  <div class="dim">—</div>
+                  <div class="dim">—</div>
+                </div>
+                <p class="text-[10px] text-slate-400">Screen 4</p>
+              </div>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">BLE Beacons (Screens 3 &amp; 4)</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li>Screen 3 shows beacons 1–3, Screen 4 shows beacons 4–5</li>
+                <li>Format: <span class="font-data text-slate-600">N RSSI dist</span> — e.g. <span class="font-data text-slate-600">1-70 3.2m</span> = beacon 1, −70 dBm, ~3.2 m</li>
+                <li><span class="font-data text-slate-600">stale</span> — beacon was seen recently but not in the last scan window</li>
+                <li><span class="font-data text-slate-600">--</span> — beacon has never been seen or is out of range</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 5 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>R B U W</div>
+                <div>P:2 SD:1</div>
+                <div>Alice</div>
+                <div>W01</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 5</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">System Status</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li><span class="font-data text-slate-600">R</span> Recording · <span class="font-data text-slate-600">B</span> BLE active · <span class="font-data text-slate-600">U</span> Uploading · <span class="font-data text-slate-600">W</span> WiFi on</li>
+                <li><span class="font-data text-slate-600">P:2</span> PSRAM segments pending · <span class="font-data text-slate-600">SD:1</span> files on SD pending</li>
+                <li>Lines 3–4: assigned waiter name and code</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 6 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>C0: 45%</div>
+                <div>C1: 12%</div>
+                <div>28°C</div>
+                <div>UL:45KB/s</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 6</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">CPU &amp; Temperature</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li><span class="font-data text-slate-600">C0</span> — Core 0 load (WiFi, BLE, upload). Will show ~99% during upload — this is normal.</li>
+                <li><span class="font-data text-slate-600">C1</span> — Core 1 load (recording, display)</li>
+                <li>Die temperature — typically runs 5–15°C above ambient</li>
+                <li>Upload speed in KB/s when active</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 7 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>Speedtest</div>
+                <div>Hold 3s</div>
+                <div>to run</div>
+                <div class="dim">—</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 7</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">Speedtest</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li><strong class="text-slate-600">Hold 3s:</strong> Connects to WiFi and runs an upload speed test to MinIO</li>
+                <li>Live progress shows Mbps and KB/total bytes sent</li>
+                <li><strong class="text-slate-600">Press:</strong> Cancel the test immediately</li>
+                <li>Results persist on the screen until the next test</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Screen 8 -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex gap-6 flex-wrap">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <div class="oled-screen">
+                <div>rec start</div>
+                <div>UL ok 1.8M</div>
+                <div>rec stop</div>
+                <div>UL ok 1.8M</div>
+              </div>
+              <p class="text-[10px] text-slate-400">Screen 8</p>
+            </div>
+            <div class="flex-1 min-w-48">
+              <p class="text-sm font-semibold text-slate-700 mb-1">Activity Log</p>
+              <ul class="text-xs text-slate-500 space-y-1 leading-relaxed">
+                <li>Shows the 4 most recent activity events</li>
+                <li>Oldest at the top, newest at the bottom</li>
+                <li>Useful for confirming that uploads are succeeding</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Button Reference ──────────────────────────────────────────────── -->
+      <section id="buttons">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Button Reference</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <p class="text-sm text-slate-500 mb-5">One physical button (D3 → GND, active-low). The device distinguishes clicks, double-clicks, rapid multi-clicks, and holds.</p>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="doc-table w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 border-b border-slate-200 whitespace-nowrap">Action</th>
+                <th class="px-4 py-3 border-b border-slate-200">Result</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Single click</td>
+                <td class="px-4 py-3 text-slate-600">Next screen (0→1→2→…→8→0). Fires 500ms after release to allow detection of double-click.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Double click</td>
+                <td class="px-4 py-3 text-slate-600">Previous screen (0→8→7→…→1→0).</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">4 rapid clicks</td>
+                <td class="px-4 py-3 text-slate-600">Toggle uploads on/off. Shows <span class="font-data">UL enabled</span> or <span class="font-data">UL off</span> for 1s. When disabled, segments fall back to SD and are uploaded when re-enabled.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Hold 3s — Screen 0</td>
+                <td class="px-4 py-3 text-slate-600">Start or stop recording. Vibration feedback confirms the action (two short pulses to start, one long pulse to stop).</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Hold 3s — Screen 1</td>
+                <td class="px-4 py-3 text-slate-600">Activate camera and scan a QR code to assign a new waiter identity. Blocked if currently recording.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Hold 3s — Screen 2</td>
+                <td class="px-4 py-3 text-slate-600">Start or stop recording (same as screen 0).</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Hold 3s — Screen 7</td>
+                <td class="px-4 py-3 text-slate-600">Run a WiFi upload speed test to MinIO.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Hold 6s — Screen 1</td>
+                <td class="px-4 py-3 text-slate-600">Load placeholder waiter identity (John · d03) for testing. Auto-fires at 6s — no release needed.</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-700">Press during speedtest</td>
+                <td class="px-4 py-3 text-slate-600">Cancel the speedtest immediately.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mt-8 mb-3">Vibration Feedback</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="doc-table w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 border-b border-slate-200">Event</th>
+                <th class="px-4 py-3 border-b border-slate-200">Pattern</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr><td class="px-4 py-3 text-slate-700">Recording started</td><td class="px-4 py-3 text-slate-600 font-data text-xs">80ms · pause · 80ms</td></tr>
+              <tr><td class="px-4 py-3 text-slate-700">Recording stopped</td><td class="px-4 py-3 text-slate-600 font-data text-xs">200ms</td></tr>
+              <tr><td class="px-4 py-3 text-slate-700">QR scan success</td><td class="px-4 py-3 text-slate-600 font-data text-xs">120ms · pause · 80ms (ascending)</td></tr>
+              <tr><td class="px-4 py-3 text-slate-700">QR scan timeout</td><td class="px-4 py-3 text-slate-600 font-data text-xs">100ms · pause · 100ms (equal)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Waiter Assignment ──────────────────────────────────────────────── -->
+      <section id="waiter">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Waiter Assignment</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+          Each recording is tagged with a waiter identity — a name and a code. This appears in every WAV filename and in the BLE data table. The identity is stored in flash and survives reboots, so you only need to re-assign when the device changes hands.
+        </p>
+
+        <ol class="space-y-4 text-sm text-slate-600 mb-6">
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+            <span>Open the <strong class="font-medium text-slate-700">Generate QR Code</strong> tab in the tools site. Enter the waiter's name and code, then download the PNG.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+            <span>Navigate the device to <strong class="font-medium text-slate-700">Screen 1</strong> (waiter screen) using single click.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+            <span>Hold the button for 3 seconds. The camera activates. Hold the printed QR code in front of the camera.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+            <span>Two ascending vibration pulses confirm success. The display updates with the new waiter name and code immediately.</span>
+          </li>
+        </ol>
+
+        <div class="bg-slate-900 rounded-xl p-4 text-xs font-data mb-4">
+          <div class="text-slate-500 mb-1">// QR code format</div>
+          <div class="text-emerald-400">Alice<span class="text-slate-500">|</span>W01</div>
+          <div class="text-slate-500 mt-2">// Resulting WAV filename</div>
+          <div class="text-sky-400">mic1_rec_20260403_120000_W01_Alice.wav</div>
+        </div>
+        <p class="text-xs text-slate-400">Recording cannot start until a waiter has been assigned at least once. If no waiter is set, the device shows an error and redirects to screen 1.</p>
+      </section>
+
+      <!-- ── Recording & Upload ────────────────────────────────────────────── -->
+      <section id="recording">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Recording &amp; Upload</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Buffer Strategy</h3>
+        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+          Audio is written directly into PSRAM — four 1.95 MB buffers totalling 7.8 MB. At 16 kHz stereo 16-bit, each buffer holds ~30 seconds. This means up to 3 completed segments can be queued for upload while a 4th is still recording.
+        </p>
+
+        <div class="grid grid-cols-4 gap-2 mb-6">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] font-semibold text-blue-600 uppercase tracking-wide mb-1">Buffer 0</p>
+            <p class="text-xs font-data text-blue-700">REC</p>
+            <p class="text-[10px] text-blue-400 mt-1">Recording now</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">Buffer 1</p>
+            <p class="text-xs font-data text-amber-700">UPL</p>
+            <p class="text-[10px] text-amber-400 mt-1">Uploading</p>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Buffer 2</p>
+            <p class="text-xs font-data text-slate-500">rdy</p>
+            <p class="text-[10px] text-slate-400 mt-1">Queued</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Buffer 3</p>
+            <p class="text-xs font-data text-slate-300">fre</p>
+            <p class="text-[10px] text-slate-300 mt-1">Empty</p>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Upload Flow</h3>
+        <ol class="space-y-2 text-sm text-slate-600 mb-6">
+          <li class="flex gap-2"><span class="text-slate-400 flex-shrink-0">1.</span>Segment fills → WAV header + BLE log written in-buffer → queued via FreeRTOS queue</li>
+          <li class="flex gap-2"><span class="text-slate-400 flex-shrink-0">2.</span>Upload task wakes → turns WiFi on → connects → streams buffer directly to MinIO (AWS Sig V4)</li>
+          <li class="flex gap-2"><span class="text-slate-400 flex-shrink-0">3.</span>Scans SD card for any leftover files from previous sessions → uploads those too</li>
+          <li class="flex gap-2"><span class="text-slate-400 flex-shrink-0">4.</span>Turns WiFi off → BLE resumes uninterrupted</li>
+        </ol>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">SD Card Fallback</h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">If WiFi fails to connect or MinIO is unreachable, segments are written to the SD card. They are automatically uploaded during the next successful connection. The retry backoff is 5 seconds on the first attempt, then 30 seconds for each subsequent attempt.</p>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500">
+          <strong class="text-slate-700">Note on Core 0 CPU load:</strong> During upload, Core 0 will show ~99% on screen 6. This is expected — the WiFi driver and TCP/IP stack run at high priority on Core 0 and legitimately dominate it. Recording on Core 1 is completely unaffected.
+        </div>
+      </section>
+
+      <!-- ── File Format ───────────────────────────────────────────────────── -->
+      <section id="files">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">File Format</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Filename</h3>
+        <div class="bg-slate-900 rounded-xl p-4 text-sm font-data mb-3 overflow-x-auto">
+          <span class="text-sky-400">mic1</span><span class="text-slate-500">_rec_</span><span class="text-emerald-400">20260403</span><span class="text-slate-500">_</span><span class="text-emerald-400">120000</span><span class="text-slate-500">_</span><span class="text-amber-400">W01</span><span class="text-slate-500">_</span><span class="text-amber-400">Alice</span><span class="text-slate-500">.wav</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 text-xs">
+          <div class="bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
+            <p class="font-semibold text-sky-700 mb-0.5">mic1</p>
+            <p class="text-sky-600">Device ID from <span class="font-data">mic_id=</span> in config</p>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+            <p class="font-semibold text-emerald-700 mb-0.5">20260403_120000</p>
+            <p class="text-emerald-600">Segment start — YYYYMMDD_HHMMSS (NTP time)</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p class="font-semibold text-amber-700 mb-0.5">W01</p>
+            <p class="text-amber-600">Waiter code from QR assignment</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p class="font-semibold text-amber-700 mb-0.5">Alice</p>
+            <p class="text-amber-600">Waiter name from QR assignment</p>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">WAV Structure</h3>
+        <p class="text-sm text-slate-600 mb-4">Each file is a standard WAV with an additional custom <span class="font-data bg-slate-100 px-1.5 py-0.5 rounded">ble_</span> RIFF chunk appended after the audio data. Standard WAV players ignore the extra chunk.</p>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200 mb-6">
+          <table class="doc-table w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th class="px-4 py-3 border-b border-slate-200">Chunk</th>
+                <th class="px-4 py-3 border-b border-slate-200">Size</th>
+                <th class="px-4 py-3 border-b border-slate-200">Contents</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">RIFF/WAVE</td><td class="px-4 py-3 font-data text-xs text-slate-400">12 B</td><td class="px-4 py-3 text-slate-600 text-xs">Standard RIFF container header</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">fmt</td><td class="px-4 py-3 font-data text-xs text-slate-400">24 B</td><td class="px-4 py-3 text-slate-600 text-xs">PCM format — stereo, 16-bit, configurable sample rate</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-blue-700">data</td><td class="px-4 py-3 font-data text-xs text-slate-400">~1.83 MB</td><td class="px-4 py-3 text-slate-600 text-xs">Interleaved stereo PCM. Left = table mic, Right = waiter mic</td></tr>
+              <tr><td class="px-4 py-3 font-data text-xs text-emerald-700">ble_</td><td class="px-4 py-3 font-data text-xs text-slate-400">~1 KB</td><td class="px-4 py-3 text-slate-600 text-xs">BLE snapshot log — 34 bytes per second: <span class="font-data">uint32 offset_ms</span> + 5 × <span class="font-data">(bool active, int8 rssi, float32 distance)</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Working with the files</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <a href="index.html#" onclick="setTimeout(()=>{document.getElementById('tab-ble').click()},100)" class="block bg-white border border-slate-200 hover:border-blue-300 rounded-xl p-4 transition group cursor-pointer">
+            <p class="text-xs font-semibold text-slate-700 mb-1 group-hover:text-blue-700 transition">Extract BLE Data →</p>
+            <p class="text-xs text-slate-500 leading-relaxed">Upload WAV files to view the BLE snapshot table and export to CSV.</p>
+          </a>
+          <a href="index.html#" onclick="setTimeout(()=>{document.getElementById('tab-split').click()},100)" class="block bg-white border border-slate-200 hover:border-blue-300 rounded-xl p-4 transition group cursor-pointer">
+            <p class="text-xs font-semibold text-slate-700 mb-1 group-hover:text-blue-700 transition">Split WAV →</p>
+            <p class="text-xs text-slate-500 leading-relaxed">Separate the stereo recording into individual table mic and waiter mic files.</p>
+          </a>
+          <div class="bg-white border border-slate-200 rounded-xl p-4">
+            <p class="text-xs font-semibold text-slate-700 mb-1">Open in Audacity</p>
+            <p class="text-xs text-slate-500 leading-relaxed">Standard stereo WAV — open directly. Use <em>Tracks → Stereo to Mono</em> to isolate channels.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Sidebar active link on scroll
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('active'));
+          const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+          if (active) active.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>
