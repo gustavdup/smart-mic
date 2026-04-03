@@ -102,11 +102,13 @@ const uint8_t TARGET_UUID[16] = {
 #define MOTOR_PIN    44  // Vibration coin motor (D7 = GPIO44)
 
 // ── Recording ─────────────────────────────────────────────────────────────────
-static int   SAMPLE_RATE = 16000;  // configurable via config.txt (sample_rate=)
-static float MIC_GAIN_L  = 4.0f;   // configurable via config.txt (mic_gain_table=)
-static float MIC_GAIN_R  = 4.0f;   // configurable via config.txt (mic_gain_waiter=)
-static char  MIC_ID[16]  = "mic1"; // configurable via config.txt (mic_id=)
-#define SEGMENT_S     30     // Segment and upload every 30 seconds
+static int   SAMPLE_RATE    = 16000; // configurable via config.txt (sample_rate=)
+static float MIC_GAIN_L     = 4.0f;  // configurable via config.txt (mic_gain_table=)
+static float MIC_GAIN_R     = 4.0f;  // configurable via config.txt (mic_gain_waiter=)
+static char  MIC_ID[16]     = "mic1";// configurable via config.txt (mic_id=)
+static int   HP_CUTOFF_HZ   = 80;    // configurable via config.txt (hp_cutoff_hz=)
+static int   SEGMENT_SECS   = 30;    // configurable via config.txt (segment_duration=)
+#define SEGMENT_S     120    // static array ceiling for bleLog — must be >= max SEGMENT_SECS
 
 // ── Beacon / Display ──────────────────────────────────────────────────────────
 // NUM_BEACONS defined above (before #includes) to fix Arduino prototype ordering
@@ -1102,7 +1104,8 @@ void recordingTask(void* arg) {
     float hp3PrevInR = 0, hp3PrevOutR = 0;
     float dcPrevInL = 0, dcPrevOutL = 0;
     float dcPrevInR = 0, dcPrevOutR = 0;
-    const float HP_ALPHA = 0.9972f;  // ~80Hz high-pass at 16kHz; cascaded = 40dB/decade rolloff
+    // Compute HP_ALPHA from configurable cutoff: alpha = RC/(RC+dt), RC = 1/(2π×fc)
+    const float HP_ALPHA = 1.0f - (2.0f * 3.14159265f * HP_CUTOFF_HZ / SAMPLE_RATE);
     const float DC_ALPHA = 0.9992f;  // ~10Hz DC blocker — removes vibration DC drift
 
     while (!stopRequested) {
@@ -1183,7 +1186,7 @@ void recordingTask(void* arg) {
         lastSnap = millis();
       }
 
-      if (millis() - segStart >= (uint32_t)SEGMENT_S * 1000) {
+      if (millis() - segStart >= (uint32_t)SEGMENT_SECS * 1000) {
         finalizeAndQueueSegment();
         activeBuf            ^= 1;          // flip to other buffer
         psramFill[activeBuf]  = 0;
@@ -1652,9 +1655,11 @@ static const char* loadConfig() {
         else if (key == "minio_access") strncpy(MINIO_ACCESS,  val.c_str(), sizeof(MINIO_ACCESS)  - 1);
         else if (key == "minio_secret") strncpy(MINIO_SECRET,  val.c_str(), sizeof(MINIO_SECRET)  - 1);
         else if (key == "sample_rate")  SAMPLE_RATE = val.toInt();
-        else if (key == "mic_gain_table")  MIC_GAIN_L = val.toFloat();
-        else if (key == "mic_gain_waiter") MIC_GAIN_R = val.toFloat();
-        else if (key == "mic_id")          strncpy(MIC_ID, val.c_str(), sizeof(MIC_ID) - 1);
+        else if (key == "mic_gain_table")   MIC_GAIN_L    = val.toFloat();
+        else if (key == "mic_gain_waiter")  MIC_GAIN_R    = val.toFloat();
+        else if (key == "mic_id")           strncpy(MIC_ID, val.c_str(), sizeof(MIC_ID) - 1);
+        else if (key == "hp_cutoff_hz")     HP_CUTOFF_HZ  = val.toInt();
+        else if (key == "segment_duration") SEGMENT_SECS  = constrain(val.toInt(), 10, SEGMENT_S);
       }
       f.close();
       fromSD = true;
@@ -1678,6 +1683,8 @@ static const char* loadConfig() {
     int   nvsSR   = prefs.getInt  ("sample_rate", SAMPLE_RATE);
     float nvsGL   = prefs.getFloat("mic_gain_tbl", MIC_GAIN_L);
     float nvsGR   = prefs.getFloat("mic_gain_wtr", MIC_GAIN_R);
+    int   nvsHP   = prefs.getInt  ("hp_cutoff_hz", HP_CUTOFF_HZ);
+    int   nvsSeg  = prefs.getInt  ("segment_dur",  SEGMENT_SECS);
     prefs.end();
 
     bool changed = strcmp(nvsSsid,   WIFI_SSID)    != 0 ||
@@ -1686,9 +1693,10 @@ static const char* loadConfig() {
                    strcmp(nvsBucket, MINIO_BUCKET)  != 0 ||
                    strcmp(nvsAccess, MINIO_ACCESS)  != 0 ||
                    strcmp(nvsSecret, MINIO_SECRET)  != 0 ||
-                   strcmp(nvsMicId,  MIC_ID)         != 0 ||
+                   strcmp(nvsMicId,  MIC_ID)        != 0 ||
                    nvsPort != MINIO_PORT || nvsSR != SAMPLE_RATE ||
-                   nvsGL != MIC_GAIN_L  || nvsGR != MIC_GAIN_R;
+                   nvsGL != MIC_GAIN_L  || nvsGR != MIC_GAIN_R  ||
+                   nvsHP != HP_CUTOFF_HZ || nvsSeg != SEGMENT_SECS;
 
     prefs.begin("cfg", false);
     prefs.putString("wifi_ssid",    WIFI_SSID);
@@ -1702,6 +1710,8 @@ static const char* loadConfig() {
     prefs.putFloat ("mic_gain_tbl",  MIC_GAIN_L);
     prefs.putFloat ("mic_gain_wtr",  MIC_GAIN_R);
     prefs.putString("mic_id",        MIC_ID);
+    prefs.putInt   ("hp_cutoff_hz",  HP_CUTOFF_HZ);
+    prefs.putInt   ("segment_dur",   SEGMENT_SECS);
     prefs.end();
     Serial.printf("[cfg] Saved to NVS (changed=%d)\n", changed);
     return changed ? "SD_CHANGED" : "SD";
@@ -1716,9 +1726,11 @@ static const char* loadConfig() {
       prefs.getString("minio_access", MINIO_ACCESS,  sizeof(MINIO_ACCESS));
       prefs.getString("minio_secret", MINIO_SECRET,  sizeof(MINIO_SECRET));
       SAMPLE_RATE = prefs.getInt  ("sample_rate", SAMPLE_RATE);
-      MIC_GAIN_L  = prefs.getFloat ("mic_gain_tbl", MIC_GAIN_L);
-      MIC_GAIN_R  = prefs.getFloat ("mic_gain_wtr", MIC_GAIN_R);
+      MIC_GAIN_L   = prefs.getFloat("mic_gain_tbl", MIC_GAIN_L);
+      MIC_GAIN_R   = prefs.getFloat("mic_gain_wtr", MIC_GAIN_R);
       prefs.getString("mic_id", MIC_ID, sizeof(MIC_ID));
+      HP_CUTOFF_HZ = prefs.getInt  ("hp_cutoff_hz", HP_CUTOFF_HZ);
+      SEGMENT_SECS = prefs.getInt  ("segment_dur",  SEGMENT_SECS);
       Serial.printf("[cfg] Loaded from NVS — WiFi:%s  MinIO:%s:%d  SR:%d\n", WIFI_SSID, MINIO_HOST, MINIO_PORT, SAMPLE_RATE);
       prefs.end();
       return "NVS";
