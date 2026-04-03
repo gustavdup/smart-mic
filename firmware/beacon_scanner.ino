@@ -1747,7 +1747,7 @@ void setup() {
   oled.setTextSize(1);
   oled.setCursor(0, 1);  oled.print("Project");
   oled.setCursor(0, 9);  oled.print("Michelin");
-  oled.setCursor(0, 17); oled.print("Prototype");
+  oled.setCursor(0, 17); oled.print("PoC v0.2");
   oled.display();
 
   // CPU temperature sensor
