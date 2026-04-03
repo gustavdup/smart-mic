@@ -12,8 +12,8 @@
     body { font-family: 'Fira Sans', system-ui, sans-serif; }
     .font-data { font-family: 'Fira Code', 'Courier New', monospace; }
 
-    /* Smooth scroll */
-    html { scroll-behavior: smooth; }
+    /* Prevent scrollbar layout shift when navigating between pages */
+    html { overflow-y: scroll; scroll-behavior: smooth; }
 
     /* Sidebar nav active state */
     .nav-link { transition: color 120ms ease, background 120ms ease; }
