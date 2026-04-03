@@ -1739,8 +1739,9 @@ void setup() {
   oled.clearDisplay();
   oled.setTextColor(SSD1306_WHITE);
   oled.setTextSize(1);
-  oled.setCursor(0, 9);
-  oled.print("Starting...");
+  oled.setCursor(0, 1);  oled.print("Project");
+  oled.setCursor(0, 9);  oled.print("Michelin");
+  oled.setCursor(0, 17); oled.print("Prototype");
   oled.display();
 
   // CPU temperature sensor
