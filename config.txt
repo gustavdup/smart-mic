@@ -1,27 +1,35 @@
 # ── WiFi ──────────────────────────────────────────────────────────────────────
+# Format: plain text string
 wifi_ssid=Home DSL
+# Format: plain text string
 wifi_pass=123454321
 
 # ── MinIO Upload ───────────────────────────────────────────────────────────────
+# Format: IP address or hostname (no http://, no trailing slash)
 minio_host=192.168.1.72
+# Format: integer (default MinIO port is 9000)
 minio_port=9000
+# Format: plain text string (bucket must already exist in MinIO)
 minio_bucket=audio
+# Format: plain text string
 minio_access=minioadmin
+# Format: plain text string
 minio_secret=minioadmin
 
 # ── Device Identity ────────────────────────────────────────────────────────────
-# mic_id: prepended to every WAV filename (e.g. mic1_rec_20260403_120000_W01_Alice.wav)
+# Format: plain text string, max 15 characters, no spaces
+# Prepended to every WAV filename (e.g. mic1_rec_20260403_120000_W01_Alice.wav)
 # Change to mic2, mic3 etc. when deploying multiple devices at the same venue.
 mic_id=mic1
 
 # ── Audio Sample Rate ──────────────────────────────────────────────────────────
-# Recommended: 16000. Min: 8000. Max: 44100.
+# Format: integer. Recommended: 16000. Min: 8000. Max: 44100.
 # Higher = better voice quality but larger files and more upload bandwidth.
 # Lower = smaller files, lower quality. 16kHz is standard for speech.
 sample_rate=16000
 
 # ── Microphone Gain ────────────────────────────────────────────────────────────
-# Recommended: 4.0. Min: 1.0. Max: 8.0 (beyond 8 risks saturation).
+# Format: decimal number (e.g. 4.0, 3.5). Recommended: 4.0. Min: 1.0. Max: 8.0.
 # mic_gain_table: table-facing mic (picks up customer + ambient).
 # mic_gain_waiter: waiter-facing mic (picks up waiter speech directly).
 # Increase if recordings are too quiet. Decrease if audio is distorted/clipping.
@@ -30,7 +38,7 @@ mic_gain_table=4.0
 mic_gain_waiter=4.0
 
 # ── High-Pass Filter Cutoff ────────────────────────────────────────────────────
-# Recommended: 80. Min: 40. Max: 200. Unit: Hz.
+# Format: integer. Unit: Hz. Recommended: 80. Min: 40. Max: 200.
 # Frequencies below this are cut — removes handling thuds, table bumps, vibration.
 # Increase (e.g. 120–150) if you get a lot of low-frequency noise from movement.
 # Decrease (e.g. 60) if male voices sound thin or lacking depth.
@@ -38,7 +46,7 @@ mic_gain_waiter=4.0
 hp_cutoff_hz=80
 
 # ── Segment Duration ───────────────────────────────────────────────────────────
-# Recommended: 30. Min: 10. Max: 120. Unit: seconds.
+# Format: integer. Unit: seconds. Recommended: 30. Min: 10. Max: 120.
 # How often a recording segment is finalised and uploaded to MinIO.
 # Shorter = more frequent uploads, smaller files, less data lost if something crashes.
 # Longer = fewer uploads, larger files, lower overhead on slow networks.
