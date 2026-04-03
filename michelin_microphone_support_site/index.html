@@ -104,6 +104,7 @@
         <a href="#screens"     class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">OLED Screens</a>
         <a href="#controls"    class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Controls & Power</a>
         <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1 px-3 pt-4">Reference</p>
+        <a href="#testkit"     class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Test Kit</a>
         <a href="#microphones" class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Microphones</a>
       </nav>
     </aside>
@@ -921,6 +922,24 @@
               <tr><td class="px-4 py-3 text-slate-700">QR scan timeout</td><td class="px-4 py-3 text-slate-600 font-data text-xs">100ms · pause · 100ms (equal)</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- ── Test Kit ────────────────────────────────────────────────────────── -->
+      <section id="testkit">
+        <h2 class="text-xl font-semibold text-slate-800 mb-1">Test Kit</h2>
+        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
+
+        <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+          To run a complete end-to-end test of the system, the Michelin Mic devices should be used together with the <strong class="font-medium text-slate-700">BLE iBeacon transmitters</strong>. Place one beacon at each table position before starting recording — the devices will detect and log proximity to each beacon throughout the session.
+        </p>
+
+        <img src="michelin-mics.jpeg" alt="Michelin Mic test kit — devices and BLE beacons"
+          class="rounded-xl border border-slate-200 w-full max-w-2xl object-cover mb-6"
+          style="max-height:420px; object-fit:cover; object-position:center" />
+
+        <div class="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 text-sm text-blue-900 leading-relaxed">
+          <strong class="font-semibold">For a valid test session:</strong> ensure all beacons are powered on and placed at their assigned table positions before recording begins. Each beacon maps to a table by its major number (1–5). The resulting WAV files will contain a full beacon proximity log for every 30-second segment.
         </div>
       </section>
 

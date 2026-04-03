@@ -221,7 +221,14 @@
         btn.classList.toggle('border-transparent', !active);
         btn.classList.toggle('text-slate-500',     !active);
       });
+      history.replaceState(null, '', '#' + name);
     }
+
+    // Activate tab from URL hash on load
+    (function() {
+      const hash = location.hash.replace('#', '');
+      if (hash === 'qr' || hash === 'process') showTab(hash);
+    })();
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Shared utilities
