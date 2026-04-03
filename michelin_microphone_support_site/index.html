@@ -101,7 +101,6 @@
         <a href="#boot"        class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Boot Sequence</a>
         <a href="#waiter"      class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Waiter Assignment</a>
         <a href="#recording"   class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Recording & Upload</a>
-        <a href="#offline"     class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Offline & Failover</a>
         <a href="#screens"     class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">OLED Screens</a>
         <a href="#controls"    class="nav-link block px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Hardware & Controls</a>
         <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1 px-3 pt-4">Reference</p>
@@ -628,25 +627,12 @@
           <li class="flex gap-2"><span class="text-slate-400 flex-shrink-0">4.</span>Turns WiFi off → BLE resumes uninterrupted</li>
         </ol>
 
-        <h3 class="text-sm font-semibold text-slate-700 mb-3">SD Card Fallback</h3>
-        <p class="text-sm text-slate-600 mb-3 leading-relaxed">If WiFi fails to connect or MinIO is unreachable, segments are written to the SD card. They are automatically uploaded during the next successful connection. The retry backoff is 5 seconds on the first attempt, then 30 seconds for each subsequent attempt.</p>
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">SD Card Fallback &amp; Offline Capability</h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">Recording never stops or pauses due to network issues. If WiFi fails to connect or MinIO is unreachable, segments are written to the SD card instead. No data is lost — files are queued and uploaded automatically during the next successful connection. The retry backoff is 5 seconds on the first attempt, then 30 seconds for each subsequent attempt.</p>
 
         <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-500">
           <strong class="text-slate-700">Note on Core 0 CPU load:</strong> During upload, Core 0 will show ~99% on screen 6. This is expected — the WiFi driver and TCP/IP stack run at high priority on Core 0 and legitimately dominate it. Recording on Core 1 is completely unaffected.
         </div>
-      </section>
-
-      <!-- ── Offline & Failover ───────────────────────────────────────────── -->
-      <section id="offline">
-        <h2 class="text-xl font-semibold text-slate-800 mb-1">Offline &amp; Failover</h2>
-        <div class="w-8 h-0.5 bg-blue-500 mb-6 rounded-full"></div>
-
-        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
-          Recording never stops or pauses due to network issues. If WiFi is unavailable or MinIO cannot be reached, the device automatically falls back to writing segments to the <strong class="font-medium text-slate-700">SD card</strong>. No data is lost — files are queued and uploaded automatically once connectivity is restored.
-        </p>
-        <p class="text-sm text-slate-600 leading-relaxed">
-          See <a href="#recording" class="text-blue-600 underline">Recording &amp; Upload</a> for the full SD card fallback behaviour including retry timing.
-        </p>
       </section>
 
       <!-- ── OLED Screens ──────────────────────────────────────────────────── -->
