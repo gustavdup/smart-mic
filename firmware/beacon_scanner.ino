@@ -2014,8 +2014,17 @@ void loop() {
               Serial.println("[btn] Stop recording"); stopRequested = true;
             }
           } else if (currentScreen == 1) {
-            Serial.println("[btn] Scan QR");
-            scanQRCode();
+            if (isRecording) {
+              oled.clearDisplay();
+              oled.setTextColor(SSD1306_WHITE); oled.setTextSize(1);
+              oled.setCursor(0, 1); oled.print("Stop rec");
+              oled.setCursor(0, 9); oled.print("first.");
+              oled.display();
+              delay(2000);
+            } else {
+              Serial.println("[btn] Scan QR");
+              scanQRCode();
+            }
           }
           g_btnState   = 0;
           g_clickCount = 0;
