@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Mic Tools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    #qrcode img, #qrcode canvas { margin: 0 auto; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+  <div class="max-w-2xl mx-auto px-4 py-10">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900">Smart Mic Tools</h1>
+      <p class="text-sm text-gray-500 mt-1">Project Michelin — Prototype</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 mb-8">
+      <button onclick="showTab('qr')" id="tab-qr"
+        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px">
+        Generate QR Code
+      </button>
+      <button onclick="showTab('ble')" id="tab-ble"
+        class="tab-btn px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px">
+        Extract BLE Data
+      </button>
+    </div>
+
+    <!-- ── QR Code Tab ─────────────────────────────────────────────────────── -->
+    <div id="panel-qr">
+      <p class="text-sm text-gray-600 mb-6">
+        Generate a QR code to assign a waiter identity to a Smart Mic device.
+        Hold the printed code in front of the camera on screen 1.
+      </p>
+
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Waiter Name</label>
+          <input id="qr-name" type="text" placeholder="e.g. Alice"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            oninput="updateQR()" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Waiter Code</label>
+          <input id="qr-code" type="text" placeholder="e.g. W01"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            oninput="updateQR()" />
+        </div>
+      </div>
+
+      <div id="qr-preview-row" class="hidden mb-2">
+        <p class="text-xs text-gray-400">QR content: <span id="qr-content-label" class="font-mono text-gray-600"></span></p>
+      </div>
+
+      <div id="qr-container" class="hidden bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center gap-6">
+        <div id="qrcode"></div>
+        <div class="text-center">
+          <p class="text-base font-semibold text-gray-800" id="qr-display-name"></p>
+          <p class="text-sm text-gray-400" id="qr-display-code"></p>
+        </div>
+        <button onclick="downloadQR()"
+          class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition">
+          Download PNG
+        </button>
+      </div>
+
+      <div id="qr-placeholder" class="bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-400 text-sm">
+        Enter a name and code to generate a QR code.
+      </div>
+    </div>
+
+    <!-- ── BLE Data Tab ────────────────────────────────────────────────────── -->
+    <div id="panel-ble" class="hidden">
+      <p class="text-sm text-gray-600 mb-6">
+        Upload a WAV file recorded by Smart Mic. The embedded BLE snapshot data
+        will be extracted and displayed.
+      </p>
+
+      <!-- Drop zone -->
+      <label id="drop-zone"
+        class="block border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition mb-6"
+        ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+        <input id="wav-input" type="file" accept=".wav" class="hidden" onchange="handleFile(this.files[0])" />
+        <p class="text-sm font-medium text-gray-600">Drop a WAV file here, or <span class="text-blue-600 underline">browse</span></p>
+        <p class="text-xs text-gray-400 mt-1">Must be a Smart Mic recording with embedded BLE chunk</p>
+      </label>
+
+      <!-- Error -->
+      <div id="ble-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-6"></div>
+
+      <!-- Results -->
+      <div id="ble-results" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-sm font-medium text-gray-700" id="ble-summary"></p>
+          <button onclick="exportCSV()"
+            class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium px-4 py-1.5 rounded-lg transition">
+            Export CSV
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-gray-200">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-gray-50 text-gray-500 uppercase tracking-wide">
+              <tr>
+                <th class="px-3 py-2.5">Time (s)</th>
+                <th class="px-3 py-2.5">B1 RSSI</th>
+                <th class="px-3 py-2.5">B1 Dist</th>
+                <th class="px-3 py-2.5">B2 RSSI</th>
+                <th class="px-3 py-2.5">B2 Dist</th>
+                <th class="px-3 py-2.5">B3 RSSI</th>
+                <th class="px-3 py-2.5">B3 Dist</th>
+                <th class="px-3 py-2.5">B4 RSSI</th>
+                <th class="px-3 py-2.5">B4 Dist</th>
+                <th class="px-3 py-2.5">B5 RSSI</th>
+                <th class="px-3 py-2.5">B5 Dist</th>
+              </tr>
+            </thead>
+            <tbody id="ble-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    function showTab(name) {
+      ['qr', 'ble'].forEach(t => {
+        document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+        const btn = document.getElementById('tab-' + t);
+        btn.classList.toggle('border-blue-600', t === name);
+        btn.classList.toggle('text-blue-600',   t === name);
+        btn.classList.toggle('border-transparent', t !== name);
+        btn.classList.toggle('text-gray-500',   t !== name);
+      });
+    }
+
+    // ── QR Code ───────────────────────────────────────────────────────────────
+    let qrInstance = null;
+
+    function updateQR() {
+      const name = document.getElementById('qr-name').value.trim();
+      const code = document.getElementById('qr-code').value.trim();
+
+      if (!name || !code) {
+        document.getElementById('qr-container').classList.add('hidden');
+        document.getElementById('qr-placeholder').classList.remove('hidden');
+        document.getElementById('qr-preview-row').classList.add('hidden');
+        return;
+      }
+
+      const content = name + '|' + code;
+      document.getElementById('qr-content-label').textContent = content;
+      document.getElementById('qr-preview-row').classList.remove('hidden');
+      document.getElementById('qr-display-name').textContent = name;
+      document.getElementById('qr-display-code').textContent = code;
+      document.getElementById('qr-container').classList.remove('hidden');
+      document.getElementById('qr-placeholder').classList.add('hidden');
+
+      const el = document.getElementById('qrcode');
+      el.innerHTML = '';
+      qrInstance = new QRCode(el, {
+        text: content,
+        width: 200,
+        height: 200,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    function downloadQR() {
+      const name = document.getElementById('qr-name').value.trim();
+      const code = document.getElementById('qr-code').value.trim();
+      const canvas = document.querySelector('#qrcode canvas');
+      if (!canvas) return;
+
+      // Add white padding + label below QR
+      const pad = 20, labelH = 40;
+      const out = document.createElement('canvas');
+      out.width  = canvas.width  + pad * 2;
+      out.height = canvas.height + pad * 2 + labelH;
+      const ctx = out.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, out.width, out.height);
+      ctx.drawImage(canvas, pad, pad);
+      ctx.fillStyle = '#111111';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(name + '  |  ' + code, out.width / 2, canvas.height + pad + 26);
+
+      const a = document.createElement('a');
+      a.download = 'qr_' + code + '_' + name + '.png';
+      a.href = out.toDataURL('image/png');
+      a.click();
+    }
+
+    // ── BLE Parsing ───────────────────────────────────────────────────────────
+    let parsedSnapshots = [];
+    let currentFilename = '';
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    }
+
+    async function handleFile(file) {
+      if (!file) return;
+      currentFilename = file.name.replace(/\.wav$/i, '');
+      document.getElementById('ble-error').classList.add('hidden');
+      document.getElementById('ble-results').classList.add('hidden');
+
+      try {
+        parsedSnapshots = await parseBLE(file);
+        renderTable(parsedSnapshots, file.name);
+      } catch (err) {
+        document.getElementById('ble-error').textContent = err.message;
+        document.getElementById('ble-error').classList.remove('hidden');
+      }
+    }
+
+    async function parseBLE(file) {
+      const buffer = await file.arrayBuffer();
+      const view   = new DataView(buffer);
+
+      const riff = readStr(view, 0, 4);
+      if (riff !== 'RIFF') throw new Error('Not a valid WAV file (missing RIFF header).');
+      const wave = readStr(view, 8, 4);
+      if (wave !== 'WAVE') throw new Error('Not a valid WAV file (missing WAVE identifier).');
+
+      // Walk RIFF chunks to find 'ble_'
+      let offset = 12;
+      while (offset + 8 <= view.byteLength) {
+        const id   = readStr(view, offset, 4);
+        const size = view.getUint32(offset + 4, true);
+
+        if (id === 'ble_') {
+          return parseBLEChunk(view, offset + 8, size);
+        }
+        offset += 8 + size;
+        if (size % 2 !== 0) offset++; // RIFF word-alignment padding
+      }
+      throw new Error('No BLE data chunk found. Make sure this is a Smart Mic recording.');
+    }
+
+    function parseBLEChunk(view, start, size) {
+      // Each snapshot: uint32 offset_ms (4) + 5 × (bool active (1) + int8 rssi (1) + float32 distance (4)) = 34 bytes
+      const SNAPSHOT_SIZE = 34;
+      const snapshots = [];
+      let pos = start;
+      const end = start + size;
+
+      while (pos + SNAPSHOT_SIZE <= end) {
+        const offset_ms = view.getUint32(pos, true); pos += 4;
+        const beacons = [];
+        for (let i = 0; i < 5; i++) {
+          const active   = view.getUint8(pos) !== 0;       pos += 1;
+          const rssi     = view.getInt8(pos);               pos += 1;
+          const distance = view.getFloat32(pos, true);      pos += 4;
+          beacons.push({ active, rssi, distance });
+        }
+        snapshots.push({ offset_ms, beacons });
+      }
+
+      if (snapshots.length === 0) throw new Error('BLE chunk found but contains no snapshots.');
+      return snapshots;
+    }
+
+    function readStr(view, offset, len) {
+      let s = '';
+      for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(offset + i));
+      return s;
+    }
+
+    function renderTable(snapshots, filename) {
+      document.getElementById('ble-summary').textContent =
+        filename + ' — ' + snapshots.length + ' snapshot' + (snapshots.length !== 1 ? 's' : '');
+
+      const tbody = document.getElementById('ble-table-body');
+      tbody.innerHTML = '';
+
+      snapshots.forEach(snap => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+
+        const timeSec = (snap.offset_ms / 1000).toFixed(1);
+        let html = `<td class="px-3 py-2 text-gray-500">${timeSec}</td>`;
+        snap.beacons.forEach(b => {
+          if (!b.active) {
+            html += `<td class="px-3 py-2 text-gray-300">—</td><td class="px-3 py-2 text-gray-300">—</td>`;
+          } else {
+            html += `<td class="px-3 py-2 font-mono">${b.rssi}</td>`;
+            html += `<td class="px-3 py-2 font-mono">${b.distance.toFixed(1)}m</td>`;
+          }
+        });
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('ble-results').classList.remove('hidden');
+    }
+
+    function exportCSV() {
+      const rows = ['time_s,b1_rssi,b1_dist_m,b2_rssi,b2_dist_m,b3_rssi,b3_dist_m,b4_rssi,b4_dist_m,b5_rssi,b5_dist_m'];
+      parsedSnapshots.forEach(snap => {
+        const t = (snap.offset_ms / 1000).toFixed(3);
+        const cols = snap.beacons.map(b => b.active ? `${b.rssi},${b.distance.toFixed(3)}` : ',');
+        rows.push(t + ',' + cols.join(','));
+      });
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = currentFilename + '_ble.csv';
+      a.click();
+    }
+  </script>
+</body>
+</html>
