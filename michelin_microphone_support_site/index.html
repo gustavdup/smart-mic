@@ -230,7 +230,7 @@
           </div>
           <div class="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
             <p class="font-semibold text-emerald-700 mb-0.5">20260403_120000</p>
-            <p class="text-emerald-600">Segment start — YYYYMMDD_HHMMSS (NTP time)</p>
+            <p class="text-emerald-600">Segment start — YYYYMMDD_HHMMSS (NTP time). Requires network at boot — falls back to <span class="font-data">fallback_N</span> counter if NTP sync fails.</p>
           </div>
           <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             <p class="font-semibold text-amber-700 mb-0.5">W01</p>
@@ -748,6 +748,7 @@
                 <li>Format: <span class="font-data text-slate-600">N RSSI dist</span> — e.g. <span class="font-data text-slate-600">1-70 3.2m</span> = beacon 1, −70 dBm, ~3.2 m</li>
                 <li><span class="font-data text-slate-600">stale</span> — beacon was seen recently but not in the last scan window</li>
                 <li><span class="font-data text-slate-600">--</span> — beacon has never been seen or is out of range</li>
+                <li class="text-slate-400 italic">Distance readings are unsmoothed in this prototype — expect ±1–5 m variation for a stationary beacon. Signal filtering is planned for a future version.</li>
               </ul>
             </div>
           </div>
@@ -979,7 +980,7 @@
 
         <h3 class="text-sm font-semibold text-slate-700 mb-3">Power</h3>
         <p class="text-sm text-slate-600 mb-6 leading-relaxed">
-          Beacons are powered automatically when the battery is installed — there is no on/off switch. Simply insert the battery before placing the beacon at the table. Battery life is approximately <strong class="font-medium text-slate-700">one year</strong> under normal use; replace the coin cell if the beacon stops appearing in the proximity logs.
+          Beacons are powered automatically when the battery is installed — there is no on/off switch. Simply insert the battery before placing the beacon at the table. Battery life is approximately <strong class="font-medium text-slate-700">one year</strong> under normal use; replace the <strong class="font-medium text-slate-700">CR2032 coin cell</strong> if the beacon stops appearing in the proximity logs.
         </p>
 
         <h3 class="text-sm font-semibold text-slate-700 mb-3">Table Mapping</h3>
